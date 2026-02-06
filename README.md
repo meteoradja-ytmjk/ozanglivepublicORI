@@ -18,6 +18,7 @@
   <a href="#-fitur">Fitur</a> •
   <a href="#-instalasi">Instalasi</a> •
   <a href="#-konfigurasi">Konfigurasi</a> •
+  <a href="#-importexport--backup">Import/Export</a> •
   <a href="#-youtube-api-setup">YouTube API</a> •
   <a href="#-dokumentasi">Dokumentasi</a>
 </p>
@@ -33,6 +34,7 @@
   - [Docker Installation](#docker-installation)
 - [Update Aplikasi](#-update-aplikasi)
 - [Konfigurasi](#-konfigurasi)
+- [Import/Export & Backup](#-importexport--backup)
 - [YouTube API Setup](#-youtube-api-setup)
 - [PM2 Commands](#-pm2-commands)
 - [Troubleshooting](#-troubleshooting)
@@ -79,6 +81,8 @@
 - Comprehensive Backup (semua data)
 - Selective Export
 - Easy Import dengan Duplicate Handling
+- **Backward Compatibility** - Auto-detect & convert old format
+- Migration Helper untuk format lama
 
 </td>
 </tr>
@@ -198,6 +202,68 @@ cd ~/ozanglivepublic && git fetch origin && git reset --hard origin/main && npm 
 
 ```bash
 npm run generate-secret
+```
+
+---
+
+## 💾 Import/Export & Backup
+
+### Export Data
+
+OzangLive mendukung export data lengkap atau selektif:
+
+1. Buka **Settings** → **Export Data**
+2. Pilih kategori yang ingin diexport:
+   - Streams (konfigurasi streaming)
+   - YouTube Credentials
+   - Broadcast Templates
+   - Recurring Schedules
+   - Stream Templates
+   - Playlists
+   - Title Folders & Suggestions
+   - Thumbnail Files
+3. Klik **Export Data**
+4. File JSON akan otomatis terdownload
+
+### Import Data
+
+**Fitur Backward Compatibility** - Sistem otomatis mendeteksi dan mengkonversi format lama!
+
+1. Buka **Settings** → **Import Data**
+2. Upload file backup JSON (format lama atau baru)
+3. Centang **"Skip data duplikat"** jika tidak ingin duplikasi
+4. Klik **Import Data**
+
+**Format Detection:**
+- ✅ Format baru (dengan metadata) → Import langsung
+- ✅ Format lama (tanpa metadata) → Auto-convert ke format baru
+- ✅ Enhanced error logging untuk troubleshooting
+
+### Migration Helper
+
+Sistem dilengkapi dengan **Migration Helper Service** yang:
+- Auto-deteksi format backup (lama vs baru)
+- Konversi otomatis format lama ke format baru
+- Migrasi field names dan struktur data
+- Menambahkan default values untuk field yang hilang
+- Logging detail untuk debugging
+
+**File terkait:**
+- `services/migration-helper.js` - Migration service
+- `services/backupService.js` - Import/export logic
+- `app.js` - Enhanced error logging
+
+### Troubleshooting Import
+
+Jika import gagal, periksa:
+
+1. **Server logs** - Cari log dengan prefix `[Import]`
+2. **Error message** - Sistem akan menampilkan error detail
+3. **File structure** - Log akan menampilkan struktur file
+
+**Log yang berguna:**
+```bash
+pm2 logs ozanglive --lines 100 | grep "\[Import\]"
 ```
 
 ---
