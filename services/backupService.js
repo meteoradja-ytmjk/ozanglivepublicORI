@@ -1692,81 +1692,173 @@ async function comprehensiveImport(backupData, userId, options = {}) {
   // This ensures thumbnail folders exist before importing templates that reference them
   let thumbnailFolderMap = new Map();
   if (backupData.thumbnail_files) {
-    const thumbnailResult = await importThumbnailFilesData(
-      backupData.thumbnail_files, userId, options
-    );
-    results.results.thumbnail_files = {
-      imported: thumbnailResult.imported,
-      overwritten: thumbnailResult.overwritten,
-      skipped: thumbnailResult.skipped,
-      errors: thumbnailResult.errors
-    };
-    thumbnailFolderMap = thumbnailResult.folderMap;
-    console.log(`Thumbnail folder map has ${thumbnailFolderMap.size} entries`);
+    try {
+      console.log('[Import] Starting thumbnail_files import...');
+      const thumbnailResult = await importThumbnailFilesData(
+        backupData.thumbnail_files, userId, options
+      );
+      results.results.thumbnail_files = {
+        imported: thumbnailResult.imported,
+        overwritten: thumbnailResult.overwritten,
+        skipped: thumbnailResult.skipped,
+        errors: thumbnailResult.errors
+      };
+      thumbnailFolderMap = thumbnailResult.folderMap;
+      console.log(`[Import] Thumbnail folder map has ${thumbnailFolderMap.size} entries`);
+    } catch (error) {
+      console.error('[Import] Error importing thumbnail_files:', error.message);
+      results.results.thumbnail_files = {
+        imported: 0,
+        errors: [`Failed to import thumbnails: ${error.message}`]
+      };
+      results.warnings.push(`Thumbnail import failed: ${error.message}`);
+    }
   }
 
   // Import in correct order for referential integrity
   // 1. YouTube credentials first (referenced by templates)
   if (backupData.youtube_credentials) {
-    results.results.youtube_credentials = await importYouTubeCredentialsData(
-      backupData.youtube_credentials, userId, options
-    );
+    try {
+      console.log('[Import] Starting youtube_credentials import...');
+      results.results.youtube_credentials = await importYouTubeCredentialsData(
+        backupData.youtube_credentials, userId, options
+      );
+    } catch (error) {
+      console.error('[Import] Error importing youtube_credentials:', error.message);
+      results.results.youtube_credentials = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`YouTube credentials import failed: ${error.message}`);
+    }
   }
 
   // 2. Streams (independent)
   if (backupData.streams) {
-    results.results.streams = await importStreams({ streams: backupData.streams }, userId, options);
+    try {
+      console.log('[Import] Starting streams import...');
+      results.results.streams = await importStreams({ streams: backupData.streams }, userId, options);
+    } catch (error) {
+      console.error('[Import] Error importing streams:', error.message);
+      console.error('[Import] Error stack:', error.stack);
+      results.results.streams = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Streams import failed: ${error.message}`);
+    }
   }
 
   // 3. Broadcast templates (may reference credentials and thumbnail folders)
   if (backupData.broadcast_templates) {
-    results.results.broadcast_templates = await importBroadcastTemplatesData(
-      backupData.broadcast_templates, userId, options, thumbnailFolderMap
-    );
+    try {
+      console.log('[Import] Starting broadcast_templates import...');
+      results.results.broadcast_templates = await importBroadcastTemplatesData(
+        backupData.broadcast_templates, userId, options, thumbnailFolderMap
+      );
+    } catch (error) {
+      console.error('[Import] Error importing broadcast_templates:', error.message);
+      results.results.broadcast_templates = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Broadcast templates import failed: ${error.message}`);
+    }
   }
 
   // 4. Stream templates (independent)
   if (backupData.stream_templates) {
-    results.results.stream_templates = await importStreamTemplatesData(
-      backupData.stream_templates, userId, options
-    );
+    try {
+      console.log('[Import] Starting stream_templates import...');
+      results.results.stream_templates = await importStreamTemplatesData(
+        backupData.stream_templates, userId, options
+      );
+    } catch (error) {
+      console.error('[Import] Error importing stream_templates:', error.message);
+      results.results.stream_templates = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Stream templates import failed: ${error.message}`);
+    }
   }
 
   // 5. Recurring schedules (may reference templates and credentials)
   if (backupData.recurring_schedules) {
-    results.results.recurring_schedules = await importRecurringSchedulesData(
-      backupData.recurring_schedules, userId, options
-    );
+    try {
+      console.log('[Import] Starting recurring_schedules import...');
+      results.results.recurring_schedules = await importRecurringSchedulesData(
+        backupData.recurring_schedules, userId, options
+      );
+    } catch (error) {
+      console.error('[Import] Error importing recurring_schedules:', error.message);
+      results.results.recurring_schedules = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Recurring schedules import failed: ${error.message}`);
+    }
   }
 
   // 6. Playlists (may reference videos)
   if (backupData.playlists) {
-    results.results.playlists = await importPlaylistsData(
-      backupData.playlists, userId, options
-    );
+    try {
+      console.log('[Import] Starting playlists import...');
+      results.results.playlists = await importPlaylistsData(
+        backupData.playlists, userId, options
+      );
+    } catch (error) {
+      console.error('[Import] Error importing playlists:', error.message);
+      results.results.playlists = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Playlists import failed: ${error.message}`);
+    }
   }
 
   // 7. Title folders (must be imported before title suggestions)
   let folderMap = new Map();
   if (backupData.title_folders) {
-    const folderResult = await importTitleFoldersData(
-      backupData.title_folders, userId, options
-    );
-    results.results.title_folders = {
-      imported: folderResult.imported,
-      skipped: folderResult.skipped,
-      errors: folderResult.errors
-    };
-    folderMap = folderResult.folderMap;
+    try {
+      console.log('[Import] Starting title_folders import...');
+      const folderResult = await importTitleFoldersData(
+        backupData.title_folders, userId, options
+      );
+      results.results.title_folders = {
+        imported: folderResult.imported,
+        skipped: folderResult.skipped,
+        errors: folderResult.errors
+      };
+      folderMap = folderResult.folderMap;
+    } catch (error) {
+      console.error('[Import] Error importing title_folders:', error.message);
+      results.results.title_folders = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Title folders import failed: ${error.message}`);
+    }
   }
 
   // 8. Title suggestions (references title folders)
   if (backupData.title_suggestions) {
-    results.results.title_suggestions = await importTitleSuggestionsData(
-      backupData.title_suggestions, userId, folderMap, options
-    );
+    try {
+      console.log('[Import] Starting title_suggestions import...');
+      results.results.title_suggestions = await importTitleSuggestionsData(
+        backupData.title_suggestions, userId, folderMap, options
+      );
+    } catch (error) {
+      console.error('[Import] Error importing title_suggestions:', error.message);
+      results.results.title_suggestions = {
+        imported: 0,
+        errors: [`Failed: ${error.message}`]
+      };
+      results.warnings.push(`Title suggestions import failed: ${error.message}`);
+    }
   }
 
+  console.log('[Import] Comprehensive import completed');
   return results;
 }
 

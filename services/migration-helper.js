@@ -14,18 +14,31 @@ function isOldFormat(data) {
     // Old format characteristics:
     // 1. No metadata object
     // 2. Has streams array directly
-    // 3. May have old field names
+    // 3. May have old field names (thumbnail_folders instead of thumbnail_files)
+    // 4. Metadata counts has thumbnail_folders, thumbnail_standalone_files, thumbnail_skipped_files
 
     const hasMetadata = data.metadata && typeof data.metadata === 'object';
     const hasStreamsArray = Array.isArray(data.streams);
 
-    // If has metadata with exportType, it's new format
-    if (hasMetadata && data.metadata.exportType) {
-        return false;
+    // Check for old thumbnail structure in metadata counts
+    const hasOldThumbnailStructure = hasMetadata &&
+        data.metadata.counts &&
+        (data.metadata.counts.thumbnail_folders !== undefined ||
+            data.metadata.counts.thumbnail_standalone_files !== undefined ||
+            data.metadata.counts.thumbnail_skipped_files !== undefined);
+
+    // Check for old thumbnail structure in data
+    const hasOldThumbnailData = data.thumbnail_folders !== undefined;
+
+    // If has metadata with exportType but also has old thumbnail structure, it's old format
+    if (hasMetadata && data.metadata.exportType && (hasOldThumbnailStructure || hasOldThumbnailData)) {
+        console.log('[Migration] Detected old format with metadata but old thumbnail structure');
+        return true;
     }
 
     // If has streams array but no metadata, likely old format
     if (hasStreamsArray && !hasMetadata) {
+        console.log('[Migration] Detected old format without metadata');
         return true;
     }
 
@@ -77,10 +90,14 @@ function migrateToNewFormat(oldData) {
         }
     });
 
-    // Handle thumbnail_files if present
+    // Handle thumbnail_files - support both old and new naming
     if (oldData.thumbnail_files) {
         newData.thumbnail_files = oldData.thumbnail_files;
         console.log('[Migration] Migrated thumbnail_files');
+    } else if (oldData.thumbnail_folders) {
+        // Old format uses thumbnail_folders instead of thumbnail_files
+        newData.thumbnail_files = oldData.thumbnail_folders;
+        console.log('[Migration] Migrated thumbnail_folders as thumbnail_files');
     }
 
     return newData;
