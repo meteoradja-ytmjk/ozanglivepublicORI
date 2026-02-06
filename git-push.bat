@@ -6,7 +6,7 @@ echo ========================================
 echo.
 
 :: Set remote URL
-set REPO_URL=https://github.com/meteoradja-ytmjk/ozanglivepublic.git
+set REPO_URL=https://github.com/meteoradja-ytmjk/ozanglivepublicORI.git
 
 :: Check if remote exists and update URL
 git remote get-url origin >nul 2>&1
