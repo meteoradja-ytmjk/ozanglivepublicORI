@@ -1,0 +1,22 @@
+node_modules
+public/uploads/
+logs/
+
+# ignore real env from repo
+.env
+
+# Vim swap files
+*.swp
+*.swo
+*~
+
+# Git merge/conflict files
+*.orig
+.MERGE_MSG.swp
+MERGE_MSG
+
+# Database files
+db/streamflow.db
+db/streamflow.db-shm
+db/streamflow.db-wal
+db/sessions.db

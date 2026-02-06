@@ -1,0 +1,90 @@
+# Implementation Plan
+
+- [x] 1. Create database schema and model
+  - [x] 1.1 Add stream_templates table migration to database.js
+    - Create table with all required columns (id, user_id, name, video_id, audio_id, duration_hours, duration_minutes, loop_video, schedule_type, recurring_time, schedule_days, created_at, updated_at)
+    - Add unique constraint on (user_id, name)
+    - _Requirements: 4.1_
+  - [x] 1.2 Create StreamTemplate model in models/StreamTemplate.js
+    - Implement CRUD methods (create, findAll, findById, update, delete)
+    - Implement findByUserId method
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [x] 1.3 Write property test for template persistence round-trip
+    - **Property 4: Template Persistence Round-Trip**
+    - **Validates: Requirements 4.1, 4.2**
+
+- [x] 2. Implement API endpoints
+  - [x] 2.1 Create GET /api/templates endpoint
+    - Return all templates for authenticated user
+    - Include name and created_at in response
+    - _Requirements: 3.1, 3.4, 4.2_
+  - [x] 2.2 Create POST /api/templates endpoint
+    - Validate required fields (name)
+    - Check for duplicate name and handle overwrite
+    - Save template to database
+    - _Requirements: 1.2, 1.3, 1.4, 4.1_
+  - [x] 2.3 Create PUT /api/templates/:id endpoint
+    - Update template name and settings
+    - _Requirements: 3.3_
+  - [x] 2.4 Create DELETE /api/templates/:id endpoint
+    - Remove template from database
+    - _Requirements: 3.2, 4.3_
+  - [x] 2.5 Write property test for template list completeness
+    - **Property 5: Template List Completeness**
+    - **Validates: Requirements 3.1, 3.4**
+  - [x] 2.6 Write property test for template deletion permanence
+    - **Property 6: Template Deletion Permanence**
+    - **Validates: Requirements 4.3**
+
+- [x] 3. Checkpoint - Ensure backend tests pass
+  - All tests passed!
+
+- [x] 4. Implement frontend template selector
+  - [x] 4.1 Add template selector dropdown to new stream modal
+    - Add dropdown at top of form
+    - Load templates on modal open
+    - _Requirements: 2.1_
+  - [x] 4.2 Implement template apply functionality
+    - Auto-fill form fields when template selected
+    - Keep stream key empty
+    - _Requirements: 2.2, 2.3, 2.4_
+  - [x] 4.3 Write property test for template apply correctness
+    - **Property 2: Template Apply Correctness**
+    - **Validates: Requirements 2.2**
+  - [x] 4.4 Write property test for stream key security
+    - **Property 3: Stream Key Security**
+    - **Validates: Requirements 2.3**
+
+- [x] 5. Implement save as template functionality
+  - [x] 5.1 Add "Save as Template" button to modal footer
+    - Position before Create Stream button
+    - _Requirements: 1.1_
+  - [x] 5.2 Create template name input dialog
+    - Show dialog when save button clicked
+    - Validate name input
+    - Handle duplicate name confirmation
+    - _Requirements: 1.1, 1.3_
+  - [x] 5.3 Implement save template API call
+    - Collect form values and send to POST /api/templates
+    - Show success/error notification
+    - _Requirements: 1.2, 1.4_
+  - [x] 5.4 Write property test for template save completeness
+    - **Property 1: Template Save Completeness**
+    - **Validates: Requirements 1.2, 1.4**
+
+- [x] 6. Implement template management UI
+  - [x] 6.1 Add template management section or modal
+    - List all templates with name and date
+    - Add edit and delete buttons
+    - _Requirements: 3.1, 3.4_
+  - [x] 6.2 Implement delete template functionality
+    - Show confirmation dialog
+    - Call DELETE API and refresh list
+    - _Requirements: 3.2_
+  - [x] 6.3 Implement edit template functionality
+    - Allow editing name and settings
+    - Call PUT API and refresh list
+    - _Requirements: 3.3_
+
+- [x] 7. Final Checkpoint
+  - All tests passed!

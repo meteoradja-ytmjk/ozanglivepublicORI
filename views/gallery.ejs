@@ -1,0 +1,2060 @@
+<% layout('layout') -%>
+<% 
+function formatFileSize(bytes) { 
+  if (bytes < 1024) return bytes + ' B'; 
+  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'; 
+  else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB'; 
+  else return (bytes / 1073741824).toFixed(1) + ' GB'; 
+} 
+function formatDuration(seconds) { 
+  if (!seconds) return '00:00'; 
+  const minutes = Math.floor(seconds / 60); 
+  const remainingSeconds = Math.floor(seconds % 60); 
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`; 
+} 
+%>
+
+<style>
+  .tab-hidden { display: none !important; }
+  .tab-visible { display: flex !important; }
+  /* Mobile buttons - only show on mobile (below md breakpoint) */
+  @media (min-width: 768px) {
+    #videoButtonsCol, #audioButtonsCol { display: none !important; }
+  }
+  @media (max-width: 767px) {
+    #videoButtonsCol.tab-visible, #audioButtonsCol.tab-visible { display: grid !important; }
+  }
+  
+  /* Group collapse animations */
+  .video-group-content, .audio-group-content {
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .video-group:hover .bg-gray-800\/50,
+  .audio-group:hover .bg-gray-800\/50 {
+    background-color: rgba(31, 41, 55, 0.7);
+  }
+  
+  /* Smooth icon rotation */
+  .ti-chevron-down {
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  /* Group header styling */
+  .video-group > div:first-child,
+  .audio-group > div:first-child {
+    user-select: none;
+  }
+</style>
+
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+  <div>
+    <h2 class="text-2xl font-bold">Media Gallery</h2>
+    <p class="text-gray-400 text-sm mt-1">Manage your videos and audio for streaming</p>
+  </div>
+  
+  <!-- Desktop buttons -->
+  <div class="hidden md:flex flex-wrap gap-3">
+    <button onclick="openUploadModal()" id="uploadVideoBtnDesktop"
+      class="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors" style="display: <%= activeTab === 'audio' ? 'none' : 'flex' %>">
+      <i class="ti ti-upload"></i>
+      <span>Upload Video</span>
+    </button>
+    <button onclick="openAudioUploadModal()" id="uploadAudioBtnDesktop"
+      class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors" style="display: <%= activeTab === 'audio' ? 'flex' : 'none' %>">
+      <i class="ti ti-upload"></i>
+      <span>Upload Audio</span>
+    </button>
+    <button onclick="openGDriveModal()" id="gdriveBtnDesktop"
+      class="flex items-center gap-2 bg-[#4285F4]/20 border border-[#4285F4]/50 hover:bg-[#4285F4]/30 text-white px-4 py-2 rounded-lg transition-colors" style="display: <%= activeTab === 'audio' ? 'none' : 'flex' %>">
+      <i class="ti ti-brand-google-drive text-[#4285F4]"></i>
+      <span>Import from Drive</span>
+    </button>
+    <button onclick="openAudioGDriveModal()" id="gdriveAudioBtnDesktop"
+      class="flex items-center gap-2 bg-[#4285F4]/20 border border-[#4285F4]/50 hover:bg-[#4285F4]/30 text-white px-4 py-2 rounded-lg transition-colors" style="display: <%= activeTab === 'audio' ? 'flex' : 'none' %>">
+      <i class="ti ti-brand-google-drive text-[#4285F4]"></i>
+      <span>Import from Drive</span>
+    </button>
+  </div>
+  
+  <!-- Mobile buttons - 2 column grid layout (side by side) -->
+  <div id="videoButtonsCol" class="md:hidden grid grid-cols-2 gap-3 w-full <%= activeTab === 'audio' ? 'tab-hidden' : 'tab-visible' %>">
+    <button onclick="openUploadModal()" id="uploadVideoBtn"
+      class="flex items-center justify-center gap-2 bg-primary hover:bg-secondary text-white px-4 py-2.5 rounded-lg transition-colors">
+      <i class="ti ti-upload"></i>
+      <span>Upload Video</span>
+    </button>
+    <button onclick="openGDriveModal()" id="gdriveBtn"
+      class="flex items-center justify-center gap-2 bg-[#4285F4]/20 border border-[#4285F4]/50 hover:bg-[#4285F4]/30 text-white px-4 py-2.5 rounded-lg transition-colors">
+      <i class="ti ti-brand-google-drive text-[#4285F4]"></i>
+      <span>Import Video</span>
+    </button>
+  </div>
+  <!-- Audio buttons - 2 column grid layout (side by side) -->
+  <div id="audioButtonsCol" class="md:hidden grid grid-cols-2 gap-3 w-full <%= activeTab === 'audio' ? 'tab-visible' : 'tab-hidden' %>">
+    <button onclick="openAudioUploadModal()" id="uploadAudioBtn"
+      class="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg transition-colors">
+      <i class="ti ti-upload"></i>
+      <span>Upload Audio</span>
+    </button>
+    <button onclick="openAudioGDriveModal()" id="gdriveAudioBtn"
+      class="flex items-center justify-center gap-2 bg-green-600/20 border border-green-500/50 hover:bg-green-600/30 text-white px-4 py-2.5 rounded-lg transition-colors">
+      <i class="ti ti-brand-google-drive text-green-500"></i>
+      <span>Import Audio</span>
+    </button>
+  </div>
+</div>
+
+<!-- Tab Navigation - Professional style with dividers -->
+<div class="flex w-full border border-gray-600 rounded-lg mb-6 overflow-hidden bg-gray-800/50">
+  <button onclick="switchTab('video')" id="videoTab"
+    class="flex-1 px-4 md:px-6 py-3 font-medium transition-colors text-center <%= activeTab !== 'audio' ? 'bg-primary/20 text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-white hover:bg-gray-700/50' %>">
+    <i class="ti ti-video mr-2"></i>Videos (<%= videos ? videos.length : 0 %>)
+  </button>
+  <div class="w-px bg-gray-600"></div>
+  <button onclick="switchTab('audio')" id="audioTab"
+    class="flex-1 px-4 md:px-6 py-3 font-medium transition-colors text-center <%= activeTab === 'audio' ? 'bg-green-500/20 text-green-500 border-b-2 border-green-500' : 'text-gray-400 hover:text-white hover:bg-gray-700/50' %>">
+    <i class="ti ti-music mr-2"></i>Audio (<%= audios ? audios.length : 0 %>)
+  </button>
+</div>
+
+<!-- Search and Sort -->
+<div class="bg-gray-800 rounded-lg p-4 mb-6">
+  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+    <div class="relative flex-1 sm:w-80 md:w-96">
+      <input type="text" id="searchInput" placeholder="Search media..."
+        class="w-full bg-dark-700 text-white pl-9 pr-4 py-2.5 border border-gray-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary">
+      <i class="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+    </div>
+    <div class="flex gap-2">
+      <select id="sortSelect"
+        class="bg-dark-700 border border-gray-600 text-white px-3 py-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary">
+        <option value="newest" selected>Z to A</option>
+        <option value="oldest">A to Z</option>
+      </select>
+      <button onclick="expandAllGroups()" title="Expand All Groups"
+        class="px-3 py-2.5 bg-dark-700 border border-gray-600 text-gray-400 hover:text-white hover:border-primary rounded-lg transition-colors">
+        <i class="ti ti-chevrons-down"></i>
+      </button>
+      <button onclick="collapseAllGroups()" title="Collapse All Groups"
+        class="px-3 py-2.5 bg-dark-700 border border-gray-600 text-gray-400 hover:text-white hover:border-primary rounded-lg transition-colors">
+        <i class="ti ti-chevrons-up"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Video List -->
+<div id="videoGrid" class="flex flex-col gap-3 <%= activeTab === 'audio' ? 'tab-hidden' : 'tab-visible' %>">
+  <% if (typeof viewPermissionDenied !== 'undefined' && viewPermissionDenied) { %>
+    <div class="text-center py-12 bg-gray-800 rounded-lg">
+      <div class="text-red-400 mb-3"><i class="ti ti-lock text-5xl"></i></div>
+      <h3 class="text-lg font-medium text-gray-300 mb-1">Permission Denied</h3>
+      <p class="text-gray-500 text-sm">You do not have permission to view videos. Please contact your administrator.</p>
+    </div>
+  <% } else if (videos && videos.length > 0) { %>
+    <% 
+    // Function to extract base name (remove numbers, special chars at end)
+    function getBaseName(title) {
+      // Remove file extension
+      let name = title.replace(/\.(mp4|avi|mov|mkv)$/i, '');
+      // Remove trailing numbers, dashes, underscores
+      name = name.replace(/[-_\s]*\d+\s*$/g, '');
+      // Remove patterns like (1), [2], etc
+      name = name.replace(/\s*[\(\[\{]\d+[\)\]\}]\s*$/g, '');
+      // Trim and lowercase for grouping
+      return name.trim().toLowerCase() || title.toLowerCase();
+    }
+    
+    // Group videos by base name
+    const videosByName = {};
+    videos.forEach(function(video) {
+      const baseName = getBaseName(video.title);
+      if (!videosByName[baseName]) {
+        videosByName[baseName] = {
+          displayName: video.title.replace(/[-_\s]*\d+\s*$/g, '').replace(/\s*[\(\[\{]\d+[\)\]\}]\s*$/g, '').trim(),
+          videos: []
+        };
+      }
+      videosByName[baseName].videos.push(video);
+    });
+    
+    // Sort groups by most recent video in each group
+    const groupKeys = Object.keys(videosByName).sort((a, b) => {
+      const latestA = Math.max(...videosByName[a].videos.map(v => new Date(v.upload_date)));
+      const latestB = Math.max(...videosByName[b].videos.map(v => new Date(v.upload_date)));
+      return latestB - latestA;
+    });
+    
+    groupKeys.forEach(function(groupKey, groupIndex) {
+      const group = videosByName[groupKey];
+      const groupVideos = group.videos.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date));
+    %>
+      <!-- Video Group -->
+      <div class="video-group" data-name="<%= groupKey %>">
+        <!-- Group Header -->
+        <div class="bg-gray-800/50 rounded-lg p-3 flex items-center justify-between cursor-pointer hover:bg-gray-800/70 transition-colors border border-gray-700/50" onclick="toggleVideoGroup('<%= groupIndex %>')">
+          <div class="flex items-center gap-3">
+            <i class="ti ti-chevron-down text-gray-400 transition-transform duration-200" id="videoGroupIcon<%= groupIndex %>"></i>
+            <div>
+              <h3 class="font-medium text-white"><%= group.displayName %></h3>
+              <p class="text-xs text-gray-400"><%= groupVideos.length %> video<%= groupVideos.length > 1 ? 's' : '' %></p>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500">
+            <i class="ti ti-folder"></i>
+          </div>
+        </div>
+        
+        <!-- Group Content -->
+        <div class="video-group-content mt-2 space-y-2" id="videoGroupContent<%= groupIndex %>">
+          <% groupVideos.forEach(function(video) { %>
+            <div class="video-card bg-gray-800 rounded-lg p-3 flex items-center gap-3 hover:bg-gray-700/50 transition-colors ml-4 border-l-2 border-primary/30" data-title="<%= video.title.toLowerCase() %>" data-date="<%= video.upload_date %>">
+              <!-- Thumbnail -->
+              <div class="relative w-20 h-14 md:w-24 md:h-16 flex-shrink-0 rounded-md overflow-hidden group cursor-pointer" onclick="playVideo('<%= video.id %>', '<%= video.title %>')">
+                <img src="<%= video.thumbnail_path %>" alt="<%= video.title %>" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <i class="ti ti-player-play-filled text-white text-lg"></i>
+                </div>
+                <span class="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] px-1 py-0.5 rounded">
+                  <%= formatDuration(video.duration) %>
+                </span>
+              </div>
+              <!-- Info -->
+              <div class="flex-1 min-w-0">
+                <h3 class="font-medium text-sm md:text-base truncate text-white"><%= video.title %></h3>
+                <div class="text-xs text-gray-400 flex items-center mt-0.5">
+                  <i class="ti ti-video text-primary mr-1"></i>
+                  <span><%= new Date(video.upload_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) %></span>
+                  <span class="mx-1">•</span>
+                  <span><%= formatFileSize(video.file_size) %></span>
+                </div>
+              </div>
+              <!-- Actions -->
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button class="p-2 text-gray-400 hover:text-white hover:bg-gray-600/50 rounded-lg transition-colors" onclick="playVideo('<%= video.id %>', '<%= video.title %>')" title="Play">
+                  <i class="ti ti-player-play text-lg"></i>
+                </button>
+                <% if (typeof permissions !== 'undefined' && permissions.can_download_videos) { %>
+                <button class="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" onclick="downloadVideo('<%= video.id %>', '<%= video.title %>')" title="Download">
+                  <i class="ti ti-download text-lg"></i>
+                </button>
+                <% } %>
+                <button class="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" onclick="showRenameDialog('<%= video.id %>', '<%= video.title %>')" title="Rename">
+                  <i class="ti ti-pencil text-lg"></i>
+                </button>
+                <% if (typeof permissions !== 'undefined' && permissions.can_delete_videos) { %>
+                <button class="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" onclick="showDeleteDialog('<%= video.id %>', '<%= video.title %>')" title="Delete">
+                  <i class="ti ti-trash text-lg"></i>
+                </button>
+                <% } %>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    <% }); %>
+  <% } else { %>
+    <div class="text-center py-12 bg-gray-800 rounded-lg">
+      <div class="text-gray-500 mb-3"><i class="ti ti-video text-5xl"></i></div>
+      <h3 class="text-lg font-medium text-gray-300 mb-1">No videos yet</h3>
+      <p class="text-gray-500 text-sm">Upload your first video to get started</p>
+    </div>
+  <% } %>
+</div>
+
+<!-- Audio List -->
+<div id="audioGrid" class="flex flex-col gap-3 <%= activeTab === 'audio' ? 'tab-visible' : 'tab-hidden' %>">
+  <% if (audios && audios.length > 0) { %>
+    <% 
+    // Function to extract base name for audio
+    function getAudioBaseName(title) {
+      // Remove file extension
+      let name = title.replace(/\.(mp3|wav|aac|m4a|flac)$/i, '');
+      // Remove trailing numbers, dashes, underscores
+      name = name.replace(/[-_\s]*\d+\s*$/g, '');
+      // Remove patterns like (1), [2], etc
+      name = name.replace(/\s*[\(\[\{]\d+[\)\]\}]\s*$/g, '');
+      // Trim and lowercase for grouping
+      return name.trim().toLowerCase() || title.toLowerCase();
+    }
+    
+    // Group audios by base name
+    const audiosByName = {};
+    audios.forEach(function(audio) {
+      const baseName = getAudioBaseName(audio.title);
+      if (!audiosByName[baseName]) {
+        audiosByName[baseName] = {
+          displayName: audio.title.replace(/[-_\s]*\d+\s*$/g, '').replace(/\s*[\(\[\{]\d+[\)\]\}]\s*$/g, '').trim(),
+          audios: []
+        };
+      }
+      audiosByName[baseName].audios.push(audio);
+    });
+    
+    // Sort groups by most recent audio in each group
+    const audioGroupKeys = Object.keys(audiosByName).sort((a, b) => {
+      const latestA = Math.max(...audiosByName[a].audios.map(v => new Date(v.upload_date)));
+      const latestB = Math.max(...audiosByName[b].audios.map(v => new Date(v.upload_date)));
+      return latestB - latestA;
+    });
+    
+    audioGroupKeys.forEach(function(groupKey, groupIndex) {
+      const group = audiosByName[groupKey];
+      const groupAudios = group.audios.sort((a, b) => new Date(b.upload_date) - new Date(a.upload_date));
+    %>
+      <!-- Audio Group -->
+      <div class="audio-group" data-name="<%= groupKey %>">
+        <!-- Group Header -->
+        <div class="bg-gray-800/50 rounded-lg p-3 flex items-center justify-between cursor-pointer hover:bg-gray-800/70 transition-colors border border-gray-700/50" onclick="toggleAudioGroup('<%= groupIndex %>')">
+          <div class="flex items-center gap-3">
+            <i class="ti ti-chevron-down text-gray-400 transition-transform duration-200" id="audioGroupIcon<%= groupIndex %>"></i>
+            <div>
+              <h3 class="font-medium text-white"><%= group.displayName %></h3>
+              <p class="text-xs text-gray-400"><%= groupAudios.length %> audio<%= groupAudios.length > 1 ? 's' : '' %></p>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500">
+            <i class="ti ti-folder"></i>
+          </div>
+        </div>
+        
+        <!-- Group Content -->
+        <div class="audio-group-content mt-2 space-y-2" id="audioGroupContent<%= groupIndex %>">
+          <% groupAudios.forEach(function(audio) { %>
+            <div class="audio-card bg-gray-800 rounded-lg p-3 flex items-center gap-3 hover:bg-gray-700/50 transition-colors ml-4 border-l-2 border-green-500/30" data-title="<%= audio.title.toLowerCase() %>" data-date="<%= audio.upload_date %>">
+              <!-- Audio Icon -->
+              <div class="relative w-14 h-14 md:w-16 md:h-16 flex-shrink-0 rounded-lg bg-gradient-to-br from-green-600/30 to-green-900/30 flex items-center justify-center cursor-pointer group" onclick="playAudio('<%= audio.id %>', '<%= audio.title %>')">
+                <i class="ti ti-music text-2xl md:text-3xl text-green-500"></i>
+                <div class="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <i class="ti ti-player-play-filled text-white text-lg"></i>
+                </div>
+              </div>
+              <!-- Info -->
+              <div class="flex-1 min-w-0">
+                <h3 class="font-medium text-sm md:text-base truncate text-white"><%= audio.title %></h3>
+                <div class="text-xs text-gray-400 flex items-center flex-wrap gap-x-2 mt-0.5">
+                  <span class="inline-flex items-center">
+                    <i class="ti ti-music text-green-500 mr-1"></i>
+                    <span class="uppercase text-green-400 font-medium"><%= audio.format %></span>
+                  </span>
+                  <span><%= formatDuration(audio.duration) %></span>
+                  <span><%= formatFileSize(audio.file_size) %></span>
+                </div>
+                <div class="text-xs text-gray-500 mt-0.5">
+                  <%= new Date(audio.upload_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) %>
+                </div>
+              </div>
+              <!-- Actions -->
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button class="p-2 text-gray-400 hover:text-green-400 hover:bg-green-500/10 rounded-lg transition-colors" onclick="playAudio('<%= audio.id %>', '<%= audio.title %>')" title="Play">
+                  <i class="ti ti-player-play text-lg"></i>
+                </button>
+                <button class="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" onclick="showRenameAudioDialog('<%= audio.id %>', '<%= audio.title %>')" title="Rename">
+                  <i class="ti ti-pencil text-lg"></i>
+                </button>
+                <button class="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" onclick="showDeleteAudioDialog('<%= audio.id %>', '<%= audio.title %>')" title="Delete">
+                  <i class="ti ti-trash text-lg"></i>
+                </button>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+    <% }); %>
+  <% } else { %>
+    <div class="text-center py-12 bg-gray-800 rounded-lg">
+      <div class="text-gray-500 mb-3"><i class="ti ti-music text-5xl"></i></div>
+      <h3 class="text-lg font-medium text-gray-300 mb-1">No audio files yet</h3>
+      <p class="text-gray-500 text-sm">Upload your first audio to get started</p>
+    </div>
+  <% } %>
+</div>
+
+
+<!-- Video Upload Modal -->
+<div id="uploadModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-dark-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-600/50 transform transition-all opacity-0 scale-95" id="uploadModalContent">
+      <div class="flex items-center justify-between p-4 border-b border-gray-600/50">
+        <h3 class="text-lg font-medium">Upload Videos</h3>
+        <button onclick="closeUploadModal()" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <form id="videoUploadForm" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <!-- Dropzone - shown when no files selected -->
+          <div id="uploadDropzone" class="border-2 border-dashed border-gray-600 hover:border-primary/70 rounded-lg py-8 px-6 text-center transition-all cursor-pointer min-h-[200px]">
+            <div class="flex flex-col items-center justify-center h-full space-y-3">
+              <i class="ti ti-upload text-4xl text-gray-500"></i>
+              <div class="space-y-1">
+                <p class="text-gray-300">Drag and drop video files here</p>
+                <p class="text-gray-500 text-sm">Or click to browse (multiple files supported)</p>
+              </div>
+              <label class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors inline-block cursor-pointer">
+                <span>Select files</span>
+                <input type="file" name="video" accept="video/mp4,video/avi,video/quicktime" class="hidden" id="videoFileInput" multiple>
+              </label>
+              <p class="text-gray-500 text-xs">Supported formats: MP4, AVI, MOV</p>
+            </div>
+          </div>
+          
+          <!-- File List - shown when files are selected -->
+          <div id="videoFileList" class="hidden">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-gray-400">Selected files (<span id="videoFileCount">0</span>)</span>
+              <button type="button" onclick="videoQueueManager.clearQueue(); updateVideoFileListUI();" class="text-xs text-red-400 hover:text-red-300">
+                <i class="ti ti-trash mr-1"></i>Clear all
+              </button>
+            </div>
+            <div id="videoFileItems" class="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+              <!-- File items will be inserted here -->
+            </div>
+          </div>
+          
+          <!-- Overall Progress -->
+          <div class="mt-4 hidden" id="videoUploadProgress">
+            <div class="flex justify-between text-sm mb-1">
+              <span>Overall Progress</span>
+              <span id="videoUploadPercent">0%</span>
+            </div>
+            <div class="w-full bg-dark-700 rounded-full h-2">
+              <div id="videoUploadBar" class="bg-primary h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <!-- Upload Summary -->
+          <div id="videoUploadSummary" class="hidden mt-4 p-3 bg-dark-700/50 rounded-lg border border-gray-600/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <span class="text-green-400"><i class="ti ti-check mr-1"></i><span id="videoSuccessCount">0</span> success</span>
+                <span class="text-red-400"><i class="ti ti-x mr-1"></i><span id="videoFailedCount">0</span> failed</span>
+              </div>
+              <button type="button" id="videoRetryBtn" onclick="retryFailedVideos()" class="hidden text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500/30">
+                <i class="ti ti-refresh mr-1"></i>Retry failed
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="flex justify-between p-4 border-t border-gray-600/50">
+        <button type="button" id="videoCancelAllBtn" onclick="cancelAllVideoUploads()" class="hidden px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">
+          <i class="ti ti-x mr-1.5"></i>Cancel All
+        </button>
+        <div class="flex gap-3 ml-auto">
+          <button onclick="closeUploadModal()" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-gray-300 rounded-lg">Close</button>
+          <button id="videoUploadButton" class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>
+            <i class="ti ti-upload mr-1.5"></i>Upload All
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audio Upload Modal -->
+<div id="audioUploadModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-dark-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-600/50 transform transition-all opacity-0 scale-95" id="audioUploadModalContent">
+      <div class="flex items-center justify-between p-4 border-b border-gray-600/50">
+        <h3 class="text-lg font-medium">Upload Audio</h3>
+        <button onclick="closeAudioUploadModal()" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <!-- Audio Conversion Toggle -->
+        <div class="mb-4 p-3 bg-dark-700/50 border border-gray-600/50 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex items-start gap-2">
+              <i class="ti ti-cpu text-gray-400 mt-0.5"></i>
+              <div>
+                <p class="text-sm font-medium text-gray-200">Konversi Audio</p>
+                <p class="text-xs text-gray-500 mt-0.5">Optimasi untuk streaming</p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="audioConvertToggle" class="sr-only peer" checked>
+              <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+            </label>
+          </div>
+          
+          <!-- Info based on toggle state -->
+          <div id="audioConvertInfo" class="mt-3 p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+            <div class="flex items-start gap-2">
+              <i class="ti ti-check-circle text-green-400 text-sm mt-0.5"></i>
+              <div class="text-xs">
+                <p class="text-green-300 font-medium">CPU Ringan saat Live</p>
+                <p class="text-green-400/70 mt-0.5">Audio di-convert ke AAC 128k, 44.1kHz stereo. Upload lebih lama tapi streaming lebih ringan.</p>
+              </div>
+            </div>
+          </div>
+          <div id="audioSkipConvertInfo" class="mt-3 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 hidden">
+            <div class="flex items-start gap-2">
+              <i class="ti ti-bolt text-yellow-400 text-sm mt-0.5"></i>
+              <div class="text-xs">
+                <p class="text-yellow-300 font-medium">Upload Cepat</p>
+                <p class="text-yellow-400/70 mt-0.5">Audio tidak di-convert, upload lebih cepat. CPU sedikit lebih tinggi saat live streaming.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <form id="audioUploadForm" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="skipConversion" id="skipConversionInput" value="false">
+          <!-- Dropzone - shown when no files selected -->
+          <div id="audioDropzone" class="border-2 border-dashed border-gray-600 hover:border-green-500/70 rounded-lg py-8 px-6 text-center transition-all cursor-pointer min-h-[200px]">
+            <div class="flex flex-col items-center justify-center h-full space-y-3">
+              <i class="ti ti-music text-4xl text-gray-500"></i>
+              <div class="space-y-1">
+                <p class="text-gray-300">Drag and drop audio files here</p>
+                <p class="text-gray-500 text-sm">Or click to browse (multiple files supported)</p>
+              </div>
+              <label class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors inline-block cursor-pointer">
+                <span>Select files</span>
+                <input type="file" name="audio" accept="audio/mpeg,audio/wav,audio/aac,audio/x-m4a" class="hidden" id="audioFileInput" multiple>
+              </label>
+              <p class="text-gray-500 text-xs">Supported formats: MP3, WAV, AAC, M4A</p>
+            </div>
+          </div>
+          
+          <!-- File List - shown when files are selected -->
+          <div id="audioFileList" class="hidden">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-gray-400">Selected files (<span id="audioFileCount">0</span>)</span>
+              <button type="button" onclick="audioQueueManager.clearQueue(); updateAudioFileListUI();" class="text-xs text-red-400 hover:text-red-300">
+                <i class="ti ti-trash mr-1"></i>Clear all
+              </button>
+            </div>
+            <div id="audioFileItems" class="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+              <!-- File items will be inserted here -->
+            </div>
+          </div>
+          
+          <!-- Overall Progress -->
+          <div class="mt-4 hidden" id="audioUploadProgress">
+            <div class="flex justify-between text-sm mb-1">
+              <span>Overall Progress</span>
+              <span id="audioUploadPercent">0%</span>
+            </div>
+            <div class="w-full bg-dark-700 rounded-full h-2">
+              <div id="audioUploadBar" class="bg-green-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <!-- Upload Summary -->
+          <div id="audioUploadSummary" class="hidden mt-4 p-3 bg-dark-700/50 rounded-lg border border-gray-600/50">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <span class="text-green-400"><i class="ti ti-check mr-1"></i><span id="audioSuccessCount">0</span> success</span>
+                <span class="text-red-400"><i class="ti ti-x mr-1"></i><span id="audioFailedCount">0</span> failed</span>
+              </div>
+              <button type="button" id="audioRetryBtn" onclick="retryFailedAudios()" class="hidden text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded hover:bg-red-500/30">
+                <i class="ti ti-refresh mr-1"></i>Retry failed
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="flex justify-between p-4 border-t border-gray-600/50">
+        <button type="button" id="audioCancelAllBtn" onclick="cancelAllAudioUploads()" class="hidden px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30">
+          <i class="ti ti-x mr-1.5"></i>Cancel All
+        </button>
+        <div class="flex gap-3 ml-auto">
+          <button onclick="closeAudioUploadModal()" class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-gray-300 rounded-lg">Close</button>
+          <button id="audioUploadButton" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:bg-gray-600 disabled:cursor-not-allowed" disabled>
+            <i class="ti ti-upload mr-1.5"></i>Upload All
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Google Drive Modal -->
+<div id="gDriveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div id="gdriveModalContent" class="bg-dark-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-600/50 transform transition-all opacity-0 scale-95">
+      <div class="flex items-center justify-between p-4 border-b border-gray-600/50">
+        <h3 class="text-lg font-medium">Google Drive Import</h3>
+        <button id="closeGDriveBtn" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+      <div id="gdriveModalBody" class="p-6">
+        <!-- Input Section -->
+        <div id="gdrive-input-section">
+          <div class="text-center mb-5">
+            <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+              <i class="ti ti-brand-google-drive text-3xl text-primary"></i>
+            </div>
+            <p class="text-gray-400 text-sm">Enter Google Drive links to your videos</p>
+            <p class="text-gray-500 text-xs mt-1">One link per line. Make sure files are set to "Anyone with the link"</p>
+          </div>
+          <textarea id="gdrive-links" class="bg-dark-700 text-white px-4 py-2.5 rounded-lg block w-full border border-gray-600 mb-2 resize-none" rows="5" placeholder="https://drive.google.com/file/d/...&#10;https://drive.google.com/file/d/...&#10;https://drive.google.com/file/d/..."></textarea>
+          <p id="gdrive-link-count" class="text-gray-500 text-xs mb-4">0 links entered</p>
+          <div id="gdrive-validation-errors" class="hidden mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p class="text-red-400 text-sm font-medium mb-1">Invalid links:</p>
+            <ul id="gdrive-error-list" class="text-red-400 text-xs list-disc list-inside"></ul>
+          </div>
+          <button id="import-drive-button" class="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 rounded-lg">
+            <i class="ti ti-download mr-2"></i>Import Videos
+          </button>
+        </div>
+        <!-- Progress Section -->
+        <div id="gdrive-progress-section" class="hidden">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-gray-300 text-sm font-medium">Importing videos...</p>
+            <p id="gdrive-overall-progress" class="text-primary text-sm">0%</p>
+          </div>
+          <div class="w-full bg-dark-700 rounded-full h-2 mb-4">
+            <div id="gdrive-progress-bar" class="bg-primary h-2 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <div id="gdrive-file-list" class="max-h-60 overflow-y-auto space-y-2 mb-4"></div>
+          <div class="flex gap-2">
+            <button id="gdrive-cancel-btn" class="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 py-2 px-4 rounded-lg border border-red-500/30">
+              <i class="ti ti-x mr-1"></i>Cancel All
+            </button>
+          </div>
+        </div>
+        <!-- Complete Section -->
+        <div id="gdrive-complete-section" class="hidden">
+          <div class="text-center mb-4">
+            <div class="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
+              <i class="ti ti-check text-3xl text-green-500"></i>
+            </div>
+            <p class="text-gray-300 text-sm">Import completed</p>
+          </div>
+          <div id="gdrive-summary" class="bg-dark-700/50 rounded-lg p-3 mb-4">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Successful:</span>
+              <span id="gdrive-success-count" class="text-green-400">0</span>
+            </div>
+            <div class="flex justify-between text-sm mt-1">
+              <span class="text-gray-400">Failed:</span>
+              <span id="gdrive-failed-count" class="text-red-400">0</span>
+            </div>
+          </div>
+          <div id="gdrive-failed-list" class="hidden max-h-40 overflow-y-auto space-y-2 mb-4"></div>
+          <div class="flex gap-2">
+            <button id="gdrive-retry-btn" class="hidden flex-1 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 py-2 px-4 rounded-lg border border-yellow-500/30">
+              <i class="ti ti-refresh mr-1"></i>Retry Failed
+            </button>
+            <button id="gdrive-done-btn" class="flex-1 bg-primary hover:bg-primary/90 text-white py-2 px-4 rounded-lg">
+              <i class="ti ti-check mr-1"></i>Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audio Google Drive Modal -->
+<div id="gDriveAudioModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden transition-opacity">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div id="gdriveAudioModalContent" class="bg-dark-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-600/50 transform transition-all opacity-0 scale-95">
+      <div class="flex items-center justify-between p-4 border-b border-gray-600/50">
+        <h3 class="text-lg font-medium">Import Audio from Google Drive</h3>
+        <button onclick="closeAudioGDriveModal()" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+      <div class="p-6">
+        <!-- Input Section -->
+        <div id="gdrive-audio-input-section">
+          <div class="text-center mb-5">
+            <div class="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
+              <i class="ti ti-brand-google-drive text-3xl text-green-500"></i>
+            </div>
+            <p class="text-gray-400 text-sm">Enter Google Drive links to your audio files</p>
+            <p class="text-gray-500 text-xs mt-1">One link per line. Make sure files are set to "Anyone with the link"</p>
+          </div>
+          <textarea id="gdrive-audio-links" class="bg-dark-700 text-white px-4 py-2.5 rounded-lg block w-full border border-gray-600 mb-2 resize-none" rows="5" placeholder="https://drive.google.com/file/d/...&#10;https://drive.google.com/file/d/...&#10;https://drive.google.com/file/d/..."></textarea>
+          <p id="gdrive-audio-link-count" class="text-gray-500 text-xs mb-4">0 links entered</p>
+          <div id="gdrive-audio-validation-errors" class="hidden mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+            <p class="text-red-400 text-sm font-medium mb-1">Invalid links:</p>
+            <ul id="gdrive-audio-error-list" class="text-red-400 text-xs list-disc list-inside"></ul>
+          </div>
+          <button id="import-audio-drive-button" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 px-4 rounded-lg">
+            <i class="ti ti-download mr-2"></i>Import Audio Files
+          </button>
+        </div>
+        <!-- Progress Section -->
+        <div id="gdrive-audio-progress-section" class="hidden">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-gray-300 text-sm font-medium">Importing audio files...</p>
+            <p id="gdrive-audio-overall-progress" class="text-green-500 text-sm">0%</p>
+          </div>
+          <div class="w-full bg-dark-700 rounded-full h-2 mb-4">
+            <div id="gdrive-audio-progress-bar" class="bg-green-500 h-2 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <div id="gdrive-audio-file-list" class="max-h-60 overflow-y-auto space-y-2 mb-4"></div>
+          <div class="flex gap-2">
+            <button id="gdrive-audio-cancel-btn" class="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 py-2 px-4 rounded-lg border border-red-500/30">
+              <i class="ti ti-x mr-1"></i>Cancel All
+            </button>
+          </div>
+        </div>
+        <!-- Complete Section -->
+        <div id="gdrive-audio-complete-section" class="hidden">
+          <div class="text-center mb-4">
+            <div class="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
+              <i class="ti ti-check text-3xl text-green-500"></i>
+            </div>
+            <p class="text-gray-300 text-sm">Import completed</p>
+          </div>
+          <div id="gdrive-audio-summary" class="bg-dark-700/50 rounded-lg p-3 mb-4">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Successful:</span>
+              <span id="gdrive-audio-success-count" class="text-green-400">0</span>
+            </div>
+            <div class="flex justify-between text-sm mt-1">
+              <span class="text-gray-400">Failed:</span>
+              <span id="gdrive-audio-failed-count" class="text-red-400">0</span>
+            </div>
+          </div>
+          <div id="gdrive-audio-failed-list" class="hidden max-h-40 overflow-y-auto space-y-2 mb-4"></div>
+          <div class="flex gap-2">
+            <button id="gdrive-audio-retry-btn" class="hidden flex-1 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 py-2 px-4 rounded-lg border border-yellow-500/30">
+              <i class="ti ti-refresh mr-1"></i>Retry Failed
+            </button>
+            <button id="gdrive-audio-done-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg">
+              <i class="ti ti-check mr-1"></i>Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed top-16 right-4 bg-dark-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 hidden flex items-center">
+  <i id="toast-icon" class="mr-2"></i>
+  <span id="toast-message"></span>
+</div>
+
+
+<script src="/js/fileQueueManager.js"></script>
+<script src="/js/driveImportQueueManager.js"></script>
+<script>
+  let currentTab = '<%= activeTab || "video" %>';
+  
+  // Group collapse state management
+  const videoGroupStates = {};
+  const audioGroupStates = {};
+  
+  // Toggle video group
+  function toggleVideoGroup(groupIndex) {
+    const content = document.getElementById(`videoGroupContent${groupIndex}`);
+    const icon = document.getElementById(`videoGroupIcon${groupIndex}`);
+    
+    if (content && icon) {
+      const isCollapsed = content.style.display === 'none';
+      
+      if (isCollapsed) {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(0deg)';
+        videoGroupStates[groupIndex] = 'expanded';
+      } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(-90deg)';
+        videoGroupStates[groupIndex] = 'collapsed';
+      }
+      
+      // Save state to localStorage
+      localStorage.setItem('videoGroupStates', JSON.stringify(videoGroupStates));
+    }
+  }
+  
+  // Toggle audio group
+  function toggleAudioGroup(groupIndex) {
+    const content = document.getElementById(`audioGroupContent${groupIndex}`);
+    const icon = document.getElementById(`audioGroupIcon${groupIndex}`);
+    
+    if (content && icon) {
+      const isCollapsed = content.style.display === 'none';
+      
+      if (isCollapsed) {
+        content.style.display = 'block';
+        icon.style.transform = 'rotate(0deg)';
+        audioGroupStates[groupIndex] = 'expanded';
+      } else {
+        content.style.display = 'none';
+        icon.style.transform = 'rotate(-90deg)';
+        audioGroupStates[groupIndex] = 'collapsed';
+      }
+      
+      // Save state to localStorage
+      localStorage.setItem('audioGroupStates', JSON.stringify(audioGroupStates));
+    }
+  }
+  
+  // Initialize group states on page load
+  function initializeGroupStates() {
+    // Load saved states from localStorage
+    const savedVideoStates = localStorage.getItem('videoGroupStates');
+    const savedAudioStates = localStorage.getItem('audioGroupStates');
+    
+    if (savedVideoStates) {
+      Object.assign(videoGroupStates, JSON.parse(savedVideoStates));
+    }
+    if (savedAudioStates) {
+      Object.assign(audioGroupStates, JSON.parse(savedAudioStates));
+    }
+    
+    // Auto-collapse older groups (keep first 2 groups expanded by default)
+    const videoGroups = document.querySelectorAll('.video-group');
+    videoGroups.forEach((group, index) => {
+      const content = document.getElementById(`videoGroupContent${index}`);
+      const icon = document.getElementById(`videoGroupIcon${index}`);
+      
+      if (content && icon) {
+        // Check if state is saved, otherwise auto-collapse groups after index 1
+        const savedState = videoGroupStates[index];
+        const shouldCollapse = savedState === 'collapsed' || (savedState === undefined && index > 1);
+        
+        if (shouldCollapse) {
+          content.style.display = 'none';
+          icon.style.transform = 'rotate(-90deg)';
+          videoGroupStates[index] = 'collapsed';
+        } else {
+          content.style.display = 'block';
+          icon.style.transform = 'rotate(0deg)';
+          videoGroupStates[index] = 'expanded';
+        }
+      }
+    });
+    
+    // Auto-collapse older audio groups
+    const audioGroups = document.querySelectorAll('.audio-group');
+    audioGroups.forEach((group, index) => {
+      const content = document.getElementById(`audioGroupContent${index}`);
+      const icon = document.getElementById(`audioGroupIcon${index}`);
+      
+      if (content && icon) {
+        const savedState = audioGroupStates[index];
+        const shouldCollapse = savedState === 'collapsed' || (savedState === undefined && index > 1);
+        
+        if (shouldCollapse) {
+          content.style.display = 'none';
+          icon.style.transform = 'rotate(-90deg)';
+          audioGroupStates[index] = 'collapsed';
+        } else {
+          content.style.display = 'block';
+          icon.style.transform = 'rotate(0deg)';
+          audioGroupStates[index] = 'expanded';
+        }
+      }
+    });
+  }
+  
+  // Call initialization when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeGroupStates();
+  });
+  
+  // Expand all groups
+  function expandAllGroups() {
+    if (currentTab === 'audio') {
+      const audioGroups = document.querySelectorAll('.audio-group');
+      audioGroups.forEach((group, index) => {
+        const content = document.getElementById(`audioGroupContent${index}`);
+        const icon = document.getElementById(`audioGroupIcon${index}`);
+        if (content && icon) {
+          content.style.display = 'block';
+          icon.style.transform = 'rotate(0deg)';
+          audioGroupStates[index] = 'expanded';
+        }
+      });
+      localStorage.setItem('audioGroupStates', JSON.stringify(audioGroupStates));
+    } else {
+      const videoGroups = document.querySelectorAll('.video-group');
+      videoGroups.forEach((group, index) => {
+        const content = document.getElementById(`videoGroupContent${index}`);
+        const icon = document.getElementById(`videoGroupIcon${index}`);
+        if (content && icon) {
+          content.style.display = 'block';
+          icon.style.transform = 'rotate(0deg)';
+          videoGroupStates[index] = 'expanded';
+        }
+      });
+      localStorage.setItem('videoGroupStates', JSON.stringify(videoGroupStates));
+    }
+  }
+  
+  // Collapse all groups
+  function collapseAllGroups() {
+    if (currentTab === 'audio') {
+      const audioGroups = document.querySelectorAll('.audio-group');
+      audioGroups.forEach((group, index) => {
+        const content = document.getElementById(`audioGroupContent${index}`);
+        const icon = document.getElementById(`audioGroupIcon${index}`);
+        if (content && icon) {
+          content.style.display = 'none';
+          icon.style.transform = 'rotate(-90deg)';
+          audioGroupStates[index] = 'collapsed';
+        }
+      });
+      localStorage.setItem('audioGroupStates', JSON.stringify(audioGroupStates));
+    } else {
+      const videoGroups = document.querySelectorAll('.video-group');
+      videoGroups.forEach((group, index) => {
+        const content = document.getElementById(`videoGroupContent${index}`);
+        const icon = document.getElementById(`videoGroupIcon${index}`);
+        if (content && icon) {
+          content.style.display = 'none';
+          icon.style.transform = 'rotate(-90deg)';
+          videoGroupStates[index] = 'collapsed';
+        }
+      });
+      localStorage.setItem('videoGroupStates', JSON.stringify(videoGroupStates));
+    }
+  }
+  
+  // Tab switching - use display style directly for reliable hiding
+  function switchTab(tab) {
+    currentTab = tab;
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tab);
+    window.history.pushState({}, '', url);
+    
+    const videoGrid = document.getElementById('videoGrid');
+    const audioGrid = document.getElementById('audioGrid');
+    const videoTab = document.getElementById('videoTab');
+    const audioTab = document.getElementById('audioTab');
+    
+    // Desktop buttons
+    const uploadVideoBtnDesktop = document.getElementById('uploadVideoBtnDesktop');
+    const uploadAudioBtnDesktop = document.getElementById('uploadAudioBtnDesktop');
+    const gdriveBtnDesktop = document.getElementById('gdriveBtnDesktop');
+    const gdriveAudioBtnDesktop = document.getElementById('gdriveAudioBtnDesktop');
+    
+    // Mobile button columns
+    const videoButtonsCol = document.getElementById('videoButtonsCol');
+    const audioButtonsCol = document.getElementById('audioButtonsCol');
+    
+    if (tab === 'audio') {
+      // Hide video, show audio - use class for !important
+      videoGrid.classList.remove('tab-visible');
+      videoGrid.classList.add('tab-hidden');
+      audioGrid.classList.remove('tab-hidden');
+      audioGrid.classList.add('tab-visible');
+      videoTab.className = 'flex-1 px-4 md:px-6 py-3 font-medium transition-colors text-center text-gray-400 hover:text-white hover:bg-gray-700/50';
+      audioTab.className = 'flex-1 px-4 md:px-6 py-3 font-medium transition-colors text-center bg-green-500/20 text-green-500 border-b-2 border-green-500';
+      
+      // Desktop buttons
+      if (uploadVideoBtnDesktop) uploadVideoBtnDesktop.style.display = 'none';
+      if (uploadAudioBtnDesktop) uploadAudioBtnDesktop.style.display = 'flex';
+      if (gdriveBtnDesktop) gdriveBtnDesktop.style.display = 'none';
+      if (gdriveAudioBtnDesktop) gdriveAudioBtnDesktop.style.display = 'flex';
+      
+      // Mobile button columns
+      if (videoButtonsCol) {
+        videoButtonsCol.classList.remove('tab-visible');
+        videoButtonsCol.classList.add('tab-hidden');
+      }
+      if (audioButtonsCol) {
+        audioButtonsCol.classList.remove('tab-hidden');
+        audioButtonsCol.classList.add('tab-visible');
+      }
+    } else {
+      // Hide audio, show video - use class for !important
+      videoGrid.classList.remove('tab-hidden');
+      videoGrid.classList.add('tab-visible');
+      audioGrid.classList.remove('tab-visible');
+      audioGrid.classList.add('tab-hidden');
+      videoTab.className = 'flex-1 px-4 md:px-6 py-3 font-medium transition-colors text-center bg-primary/20 text-primary border-b-2 border-primary';
+      audioTab.className = 'flex-1 px-4 md:px-6 py-3 font-medium transition-colors text-center text-gray-400 hover:text-white hover:bg-gray-700/50';
+      
+      // Desktop buttons
+      if (uploadVideoBtnDesktop) uploadVideoBtnDesktop.style.display = 'flex';
+      if (uploadAudioBtnDesktop) uploadAudioBtnDesktop.style.display = 'none';
+      if (gdriveBtnDesktop) gdriveBtnDesktop.style.display = 'flex';
+      if (gdriveAudioBtnDesktop) gdriveAudioBtnDesktop.style.display = 'none';
+      
+      // Mobile button columns
+      if (videoButtonsCol) {
+        videoButtonsCol.classList.remove('tab-hidden');
+        videoButtonsCol.classList.add('tab-visible');
+      }
+      if (audioButtonsCol) {
+        audioButtonsCol.classList.remove('tab-visible');
+        audioButtonsCol.classList.add('tab-hidden');
+      }
+    }
+  }
+  
+  // Toast notification
+  function showToast(type, message) {
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toast-icon');
+    const toastMessage = document.getElementById('toast-message');
+    toastIcon.className = type === 'success' ? 'ti ti-check text-green-400 text-xl mr-2' : 'ti ti-x text-red-400 text-xl mr-2';
+    toast.className = 'fixed top-16 right-4 bg-dark-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 flex items-center border-l-4 ' + (type === 'success' ? 'border-green-400' : 'border-red-400');
+    toastMessage.textContent = message;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+  }
+
+  // Video Upload Modal
+  function openUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    const content = document.getElementById('uploadModalContent');
+    modal.classList.remove('hidden');
+    setTimeout(() => { content.classList.remove('opacity-0', 'scale-95'); content.classList.add('opacity-100', 'scale-100'); }, 10);
+  }
+  
+  function closeUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    const content = document.getElementById('uploadModalContent');
+    content.classList.remove('opacity-100', 'scale-100');
+    content.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 200);
+    
+    // Reset queue and UI
+    if (window.videoQueueManager) {
+      videoQueueManager.cancelAll();
+      videoQueueManager.clearQueue();
+    }
+    document.getElementById('videoUploadForm').reset();
+    document.getElementById('uploadDropzone').classList.remove('hidden');
+    document.getElementById('videoFileList').classList.add('hidden');
+    document.getElementById('videoUploadProgress').classList.add('hidden');
+    document.getElementById('videoUploadSummary').classList.add('hidden');
+    document.getElementById('videoCancelAllBtn').classList.add('hidden');
+    document.getElementById('videoRetryBtn').classList.add('hidden');
+    document.getElementById('videoUploadButton').disabled = true;
+  }
+  
+  // Audio Upload Modal
+  function openAudioUploadModal() {
+    const modal = document.getElementById('audioUploadModal');
+    const content = document.getElementById('audioUploadModalContent');
+    modal.classList.remove('hidden');
+    setTimeout(() => { content.classList.remove('opacity-0', 'scale-95'); content.classList.add('opacity-100', 'scale-100'); }, 10);
+    
+    // Reset toggle to default (convert enabled)
+    const toggle = document.getElementById('audioConvertToggle');
+    if (toggle) {
+      toggle.checked = true;
+      updateAudioConvertInfo();
+    }
+  }
+  
+  function closeAudioUploadModal() {
+    const modal = document.getElementById('audioUploadModal');
+    const content = document.getElementById('audioUploadModalContent');
+    content.classList.remove('opacity-100', 'scale-100');
+    content.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 200);
+    
+    // Reset queue and UI
+    if (window.audioQueueManager) {
+      audioQueueManager.cancelAll();
+      audioQueueManager.clearQueue();
+    }
+    document.getElementById('audioUploadForm').reset();
+    document.getElementById('audioDropzone').classList.remove('hidden');
+    document.getElementById('audioFileList').classList.add('hidden');
+    document.getElementById('audioUploadProgress').classList.add('hidden');
+    document.getElementById('audioUploadSummary').classList.add('hidden');
+    document.getElementById('audioCancelAllBtn').classList.add('hidden');
+    document.getElementById('audioRetryBtn').classList.add('hidden');
+    document.getElementById('audioUploadButton').disabled = true;
+    
+    // Reset toggle
+    const toggle = document.getElementById('audioConvertToggle');
+    if (toggle) {
+      toggle.checked = true;
+      updateAudioConvertInfo();
+    }
+  }
+  
+  // Update audio convert info based on toggle state
+  function updateAudioConvertInfo() {
+    const toggle = document.getElementById('audioConvertToggle');
+    const convertInfo = document.getElementById('audioConvertInfo');
+    const skipInfo = document.getElementById('audioSkipConvertInfo');
+    const skipInput = document.getElementById('skipConversionInput');
+    
+    if (toggle && toggle.checked) {
+      // Convert enabled - CPU ringan saat live
+      convertInfo.classList.remove('hidden');
+      skipInfo.classList.add('hidden');
+      if (skipInput) skipInput.value = 'false';
+    } else {
+      // Skip convert - Upload cepat
+      convertInfo.classList.add('hidden');
+      skipInfo.classList.remove('hidden');
+      if (skipInput) skipInput.value = 'true';
+    }
+  }
+  
+  // Google Drive Modal (Video)
+  function openGDriveModal() {
+    const modal = document.getElementById('gDriveModal');
+    const content = document.getElementById('gdriveModalContent');
+    modal.classList.remove('hidden');
+    setTimeout(() => { content.classList.remove('opacity-0', 'scale-95'); content.classList.add('opacity-100', 'scale-100'); }, 10);
+  }
+  
+  function closeGDriveModal() {
+    const modal = document.getElementById('gDriveModal');
+    const content = document.getElementById('gdriveModalContent');
+    content.classList.remove('opacity-100', 'scale-100');
+    content.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      // Reset modal state
+      if (typeof resetGDriveModal === 'function') {
+        resetGDriveModal();
+      }
+    }, 200);
+  }
+  
+  // Google Drive Modal (Audio)
+  function openAudioGDriveModal() {
+    const modal = document.getElementById('gDriveAudioModal');
+    const content = document.getElementById('gdriveAudioModalContent');
+    modal.classList.remove('hidden');
+    setTimeout(() => { content.classList.remove('opacity-0', 'scale-95'); content.classList.add('opacity-100', 'scale-100'); }, 10);
+  }
+  
+  function closeAudioGDriveModal() {
+    const modal = document.getElementById('gDriveAudioModal');
+    const content = document.getElementById('gdriveAudioModalContent');
+    content.classList.remove('opacity-100', 'scale-100');
+    content.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      // Reset modal state
+      if (typeof resetAudioDriveModal === 'function') {
+        resetAudioDriveModal();
+      }
+    }, 200);
+  }
+  
+  // Play Video
+  function playVideo(videoId, videoTitle) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm';
+    modal.id = 'video-player-modal';
+    modal.innerHTML = `
+      <div class="relative w-full max-w-4xl mx-auto">
+        <div class="bg-dark-800 rounded-lg overflow-hidden shadow-xl">
+          <div class="flex items-center justify-between p-4 border-b border-gray-600">
+            <h3 class="text-lg font-medium">${videoTitle}</h3>
+            <button id="close-player-btn" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700">
+              <i class="ti ti-x"></i>
+            </button>
+          </div>
+          <div class="bg-dark-700 flex justify-center" style="height: 53vh;">
+            <video id="native-player" class="h-full max-w-full object-contain" controls autoplay>
+              <source src="/stream/${videoId}" type="video/mp4">
+            </video>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('close-player-btn').onclick = () => { document.getElementById('native-player').pause(); modal.remove(); };
+    modal.onclick = (e) => { if (e.target === modal) { document.getElementById('native-player').pause(); modal.remove(); } };
+  }
+  
+  // Play Audio
+  function playAudio(audioId, audioTitle) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm';
+    modal.id = 'audio-player-modal';
+    modal.innerHTML = `
+      <div class="relative w-full max-w-md mx-auto">
+        <div class="bg-dark-800 rounded-lg overflow-hidden shadow-xl">
+          <div class="flex items-center justify-between p-4 border-b border-gray-600">
+            <h3 class="text-lg font-medium">${audioTitle}</h3>
+            <button id="close-audio-btn" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700">
+              <i class="ti ti-x"></i>
+            </button>
+          </div>
+          <div class="p-6 bg-gradient-to-br from-green-900/30 to-gray-800">
+            <div class="flex justify-center mb-6">
+              <div class="w-24 h-24 rounded-full bg-green-600/20 flex items-center justify-center">
+                <i class="ti ti-music text-4xl text-green-500"></i>
+              </div>
+            </div>
+            <audio id="audio-player" class="w-full" controls autoplay>
+              <source src="/stream/audio/${audioId}" type="audio/mpeg">
+            </audio>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    document.getElementById('close-audio-btn').onclick = () => { document.getElementById('audio-player').pause(); modal.remove(); };
+    modal.onclick = (e) => { if (e.target === modal) { document.getElementById('audio-player').pause(); modal.remove(); } };
+  }
+  
+  // Video rename/delete
+  function showRenameDialog(videoId, currentTitle) {
+    const newTitle = prompt('Enter new title:', currentTitle);
+    if (newTitle && newTitle !== currentTitle) {
+      fetch(`/api/videos/${videoId}/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify({ title: newTitle })
+      }).then(r => r.json()).then(data => {
+        if (data.success) { showToast('success', 'Video renamed'); setTimeout(() => location.reload(), 1000); }
+        else showToast('error', data.error || 'Failed to rename');
+      });
+    }
+  }
+  
+  function showDeleteDialog(videoId, title) {
+    if (confirm(`Delete "${title}"?`)) {
+      fetch(`/api/videos/${videoId}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': '<%= csrfToken %>' }
+      }).then(r => r.json()).then(data => {
+        if (data.success) { showToast('success', 'Video deleted'); setTimeout(() => location.reload(), 1000); }
+        else showToast('error', data.error || 'Failed to delete');
+      });
+    }
+  }
+  
+  // Download video
+  function downloadVideo(videoId, title) {
+    window.location.href = `/api/videos/${videoId}/download`;
+  }
+  
+  // Audio rename/delete
+  function showRenameAudioDialog(audioId, currentTitle) {
+    const newTitle = prompt('Enter new title:', currentTitle);
+    if (newTitle && newTitle !== currentTitle) {
+      fetch(`/api/audios/${audioId}/rename`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<%= csrfToken %>' },
+        body: JSON.stringify({ title: newTitle })
+      }).then(r => r.json()).then(data => {
+        if (data.success) { showToast('success', 'Audio renamed'); setTimeout(() => location.reload(), 1000); }
+        else showToast('error', data.error || 'Failed to rename');
+      });
+    }
+  }
+  
+  function showDeleteAudioDialog(audioId, title) {
+    if (confirm(`Delete "${title}"?`)) {
+      fetch(`/api/audios/${audioId}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': '<%= csrfToken %>' }
+      }).then(r => r.json()).then(data => {
+        if (data.success) { showToast('success', 'Audio deleted'); setTimeout(() => location.reload(), 1000); }
+        else showToast('error', data.error || 'Failed to delete');
+      });
+    }
+  }
+  
+  // Search functionality - updated for grouping
+  document.getElementById('searchInput').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase();
+    
+    if (currentTab === 'audio') {
+      const audioGroups = document.querySelectorAll('.audio-group');
+      audioGroups.forEach((group, groupIndex) => {
+        const cards = group.querySelectorAll('.audio-card');
+        let hasVisibleCard = false;
+        
+        cards.forEach(card => {
+          const title = card.dataset.title;
+          const isVisible = title.includes(query);
+          card.style.display = isVisible ? '' : 'none';
+          if (isVisible) hasVisibleCard = true;
+        });
+        
+        // Show/hide entire group based on whether it has visible cards
+        group.style.display = hasVisibleCard || query === '' ? '' : 'none';
+        
+        // Auto-expand groups with search results
+        if (hasVisibleCard && query !== '') {
+          const content = document.getElementById(`audioGroupContent${groupIndex}`);
+          const icon = document.getElementById(`audioGroupIcon${groupIndex}`);
+          if (content && icon) {
+            content.style.display = 'block';
+            icon.style.transform = 'rotate(0deg)';
+          }
+        }
+      });
+    } else {
+      const videoGroups = document.querySelectorAll('.video-group');
+      videoGroups.forEach((group, groupIndex) => {
+        const cards = group.querySelectorAll('.video-card');
+        let hasVisibleCard = false;
+        
+        cards.forEach(card => {
+          const title = card.dataset.title;
+          const isVisible = title.includes(query);
+          card.style.display = isVisible ? '' : 'none';
+          if (isVisible) hasVisibleCard = true;
+        });
+        
+        // Show/hide entire group based on whether it has visible cards
+        group.style.display = hasVisibleCard || query === '' ? '' : 'none';
+        
+        // Auto-expand groups with search results
+        if (hasVisibleCard && query !== '') {
+          const content = document.getElementById(`videoGroupContent${groupIndex}`);
+          const icon = document.getElementById(`videoGroupIcon${groupIndex}`);
+          if (content && icon) {
+            content.style.display = 'block';
+            icon.style.transform = 'rotate(0deg)';
+          }
+        }
+      });
+    }
+  });
+  
+  // Sort functionality - updated for name-based grouping
+  document.getElementById('sortSelect').addEventListener('change', function(e) {
+    const grid = document.getElementById(currentTab === 'audio' ? 'audioGrid' : 'videoGrid');
+    const groups = Array.from(grid.querySelectorAll(currentTab === 'audio' ? '.audio-group' : '.video-group'));
+    
+    // Sort groups alphabetically by name
+    groups.sort((a, b) => {
+      const nameA = a.dataset.name || '';
+      const nameB = b.dataset.name || '';
+      
+      if (e.target.value === 'newest') {
+        // For newest, we want reverse alphabetical (Z to A)
+        return nameB.localeCompare(nameA);
+      } else {
+        // For oldest, alphabetical (A to Z)
+        return nameA.localeCompare(nameB);
+      }
+    });
+    
+    // Re-append groups in sorted order
+    groups.forEach(group => grid.appendChild(group));
+  });
+  
+  // File upload handlers
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tab display on page load - ensure correct visibility
+    const videoGrid = document.getElementById('videoGrid');
+    const audioGrid = document.getElementById('audioGrid');
+    const videoButtonsCol = document.getElementById('videoButtonsCol');
+    const audioButtonsCol = document.getElementById('audioButtonsCol');
+    const uploadVideoBtnDesktop = document.getElementById('uploadVideoBtnDesktop');
+    const uploadAudioBtnDesktop = document.getElementById('uploadAudioBtnDesktop');
+    const gdriveBtnDesktop = document.getElementById('gdriveBtnDesktop');
+    const gdriveAudioBtnDesktop = document.getElementById('gdriveAudioBtnDesktop');
+    
+    if (currentTab === 'audio') {
+      // Audio tab active - hide video, show audio
+      if (videoGrid) videoGrid.style.display = 'none';
+      if (audioGrid) audioGrid.style.display = 'flex';
+      if (videoButtonsCol) videoButtonsCol.style.display = 'none';
+      if (audioButtonsCol) audioButtonsCol.style.display = 'flex';
+      if (uploadVideoBtnDesktop) uploadVideoBtnDesktop.style.display = 'none';
+      if (uploadAudioBtnDesktop) uploadAudioBtnDesktop.style.display = 'flex';
+      if (gdriveBtnDesktop) gdriveBtnDesktop.style.display = 'none';
+      if (gdriveAudioBtnDesktop) gdriveAudioBtnDesktop.style.display = 'flex';
+    } else {
+      // Video tab active - hide audio, show video
+      if (videoGrid) videoGrid.style.display = 'flex';
+      if (audioGrid) audioGrid.style.display = 'none';
+      if (videoButtonsCol) videoButtonsCol.style.display = 'flex';
+      if (audioButtonsCol) audioButtonsCol.style.display = 'none';
+      if (uploadVideoBtnDesktop) uploadVideoBtnDesktop.style.display = 'flex';
+      if (uploadAudioBtnDesktop) uploadAudioBtnDesktop.style.display = 'none';
+      if (gdriveBtnDesktop) gdriveBtnDesktop.style.display = 'flex';
+      if (gdriveAudioBtnDesktop) gdriveAudioBtnDesktop.style.display = 'none';
+    }
+    
+    // Audio conversion toggle event listener
+    const audioConvertToggle = document.getElementById('audioConvertToggle');
+    if (audioConvertToggle) {
+      audioConvertToggle.addEventListener('change', updateAudioConvertInfo);
+    }
+    
+    // Video file input
+    const videoInput = document.getElementById('videoFileInput');
+    const videoBtn = document.getElementById('videoUploadButton');
+    
+    // Initialize Video Queue Manager
+    window.videoQueueManager = new FileQueueManager({
+      uploadUrl: '/api/videos/upload',
+      fileFieldName: 'video',
+      allowedExtensions: ['.mp4', '.avi', '.mov'],
+      allowedMimeTypes: ['video/mp4', 'video/avi', 'video/quicktime'],
+      csrfToken: '<%= csrfToken %>',
+      concurrentUploads: 3, // Upload 3 files simultaneously for faster upload
+      onProgress: (item, fileProgress, overallProgress) => {
+        document.getElementById('videoUploadBar').style.width = overallProgress + '%';
+        document.getElementById('videoUploadPercent').textContent = overallProgress + '%';
+        updateVideoFileListUI();
+      },
+      onFileComplete: (item, success, result) => {
+        updateVideoFileListUI();
+      },
+      onAllComplete: (summary) => {
+        document.getElementById('videoSuccessCount').textContent = summary.success;
+        document.getElementById('videoFailedCount').textContent = summary.failed;
+        document.getElementById('videoUploadSummary').classList.remove('hidden');
+        document.getElementById('videoCancelAllBtn').classList.add('hidden');
+        videoBtn.disabled = true;
+        
+        if (summary.failed > 0) {
+          document.getElementById('videoRetryBtn').classList.remove('hidden');
+        }
+        
+        if (summary.success > 0 && summary.failed === 0) {
+          showToast('success', `${summary.success} video(s) uploaded successfully`);
+          setTimeout(() => location.reload(), 1500);
+        } else if (summary.success > 0) {
+          showToast('success', `${summary.success} uploaded, ${summary.failed} failed`);
+        } else {
+          showToast('error', 'All uploads failed');
+        }
+      },
+      onQueueUpdate: (files) => {
+        updateVideoFileListUI();
+      }
+    });
+    
+    videoInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const result = videoQueueManager.addFiles(this.files);
+        if (result.rejected > 0) {
+          showToast('error', `${result.rejected} file(s) rejected (invalid format)`);
+        }
+        updateVideoFileListUI();
+        this.value = ''; // Reset input to allow selecting same files again
+      }
+    });
+    
+    // Drag and drop for video
+    const videoDropzone = document.getElementById('uploadDropzone');
+    videoDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      videoDropzone.classList.add('border-primary', 'bg-primary/5');
+    });
+    videoDropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      videoDropzone.classList.remove('border-primary', 'bg-primary/5');
+    });
+    videoDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      videoDropzone.classList.remove('border-primary', 'bg-primary/5');
+      if (e.dataTransfer.files.length > 0) {
+        const result = videoQueueManager.addFiles(e.dataTransfer.files);
+        if (result.rejected > 0) {
+          showToast('error', `${result.rejected} file(s) rejected (invalid format)`);
+        }
+        updateVideoFileListUI();
+      }
+    });
+    
+    videoBtn.addEventListener('click', async function() {
+      if (!videoQueueManager.hasPendingFiles()) return;
+      
+      document.getElementById('videoUploadProgress').classList.remove('hidden');
+      document.getElementById('videoCancelAllBtn').classList.remove('hidden');
+      document.getElementById('videoUploadSummary').classList.add('hidden');
+      videoBtn.disabled = true;
+      
+      await videoQueueManager.startUpload();
+    });
+    
+    // Audio file input
+    const audioInput = document.getElementById('audioFileInput');
+    const audioBtn = document.getElementById('audioUploadButton');
+    
+    // Initialize Audio Queue Manager
+    window.audioQueueManager = new FileQueueManager({
+      uploadUrl: '/api/audios/upload',
+      fileFieldName: 'audio',
+      allowedExtensions: ['.mp3', '.wav', '.aac', '.m4a'],
+      allowedMimeTypes: ['audio/mpeg', 'audio/wav', 'audio/aac', 'audio/x-m4a', 'audio/mp4'],
+      csrfToken: '<%= csrfToken %>',
+      concurrentUploads: 3, // Upload 3 files simultaneously for faster upload
+      extraDataCallback: () => {
+        const skipConversion = document.getElementById('skipConversionInput')?.value === 'true';
+        return { skipConversion: skipConversion ? 'true' : 'false' };
+      },
+      onProgress: (item, fileProgress, overallProgress) => {
+        document.getElementById('audioUploadBar').style.width = overallProgress + '%';
+        document.getElementById('audioUploadPercent').textContent = overallProgress + '%';
+        updateAudioFileListUI();
+      },
+      onFileComplete: (item, success, result) => {
+        updateAudioFileListUI();
+      },
+      onAllComplete: (summary) => {
+        document.getElementById('audioSuccessCount').textContent = summary.success;
+        document.getElementById('audioFailedCount').textContent = summary.failed;
+        document.getElementById('audioUploadSummary').classList.remove('hidden');
+        document.getElementById('audioCancelAllBtn').classList.add('hidden');
+        audioBtn.disabled = true;
+        
+        if (summary.failed > 0) {
+          document.getElementById('audioRetryBtn').classList.remove('hidden');
+        }
+        
+        if (summary.success > 0 && summary.failed === 0) {
+          showToast('success', `${summary.success} audio file(s) uploaded successfully`);
+          setTimeout(() => location.reload(), 1500);
+        } else if (summary.success > 0) {
+          showToast('success', `${summary.success} uploaded, ${summary.failed} failed`);
+        } else {
+          showToast('error', 'All uploads failed');
+        }
+      },
+      onQueueUpdate: (files) => {
+        updateAudioFileListUI();
+      }
+    });
+    
+    audioInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const result = audioQueueManager.addFiles(this.files);
+        if (result.rejected > 0) {
+          showToast('error', `${result.rejected} file(s) rejected (invalid format)`);
+        }
+        updateAudioFileListUI();
+        this.value = ''; // Reset input
+      }
+    });
+    
+    // Drag and drop for audio
+    const audioDropzone = document.getElementById('audioDropzone');
+    audioDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      audioDropzone.classList.add('border-green-500', 'bg-green-500/5');
+    });
+    audioDropzone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      audioDropzone.classList.remove('border-green-500', 'bg-green-500/5');
+    });
+    audioDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      audioDropzone.classList.remove('border-green-500', 'bg-green-500/5');
+      if (e.dataTransfer.files.length > 0) {
+        const result = audioQueueManager.addFiles(e.dataTransfer.files);
+        if (result.rejected > 0) {
+          showToast('error', `${result.rejected} file(s) rejected (invalid format)`);
+        }
+        updateAudioFileListUI();
+      }
+    });
+    
+    audioBtn.addEventListener('click', async function() {
+      if (!audioQueueManager.hasPendingFiles()) return;
+      
+      document.getElementById('audioUploadProgress').classList.remove('hidden');
+      document.getElementById('audioCancelAllBtn').classList.remove('hidden');
+      document.getElementById('audioUploadSummary').classList.add('hidden');
+      audioBtn.disabled = true;
+      
+      await audioQueueManager.startUpload();
+    });
+    
+    // Google Drive import (Video) - Multiple Links Support
+    let videoDriveManager = null;
+    
+    // Update link count on textarea input
+    document.getElementById('gdrive-links').addEventListener('input', function() {
+      const lines = this.value.split(/[\r\n]+/).filter(l => l.trim().length > 0);
+      document.getElementById('gdrive-link-count').textContent = lines.length + ' link(s) entered';
+      document.getElementById('gdrive-validation-errors').classList.add('hidden');
+    });
+    
+    document.getElementById('closeGDriveBtn').addEventListener('click', closeGDriveModal);
+    
+    document.getElementById('import-drive-button').addEventListener('click', async function() {
+      const linksText = document.getElementById('gdrive-links').value.trim();
+      if (!linksText) { 
+        showToast('error', 'Please enter at least one Google Drive link'); 
+        return; 
+      }
+      
+      // Initialize manager
+      videoDriveManager = new DriveImportQueueManager({
+        type: 'video',
+        csrfToken: '<%= csrfToken %>',
+        onProgress: (overallProgress, counts) => {
+          document.getElementById('gdrive-progress-bar').style.width = overallProgress + '%';
+          document.getElementById('gdrive-overall-progress').textContent = overallProgress + '%';
+        },
+        onFileComplete: (file, success) => {
+          updateVideoDriveFileList();
+        },
+        onAllComplete: (summary) => {
+          showVideoDriveComplete(summary);
+        },
+        onQueueUpdate: (files) => {
+          updateVideoDriveFileList();
+        },
+        onValidationError: (invalidLinks) => {
+          const errorList = document.getElementById('gdrive-error-list');
+          errorList.innerHTML = invalidLinks.map(l => `<li>${l.link}: ${l.error}</li>`).join('');
+          document.getElementById('gdrive-validation-errors').classList.remove('hidden');
+        }
+      });
+      
+      const links = videoDriveManager.parseLinks(linksText);
+      if (links.length === 0) {
+        showToast('error', 'No valid links found');
+        return;
+      }
+      
+      this.disabled = true;
+      
+      // Show progress section
+      document.getElementById('gdrive-input-section').classList.add('hidden');
+      document.getElementById('gdrive-progress-section').classList.remove('hidden');
+      document.getElementById('gdrive-complete-section').classList.add('hidden');
+      
+      const result = await videoDriveManager.startImport(links);
+      
+      if (!result.success && result.invalid) {
+        // Validation failed, show input again
+        document.getElementById('gdrive-input-section').classList.remove('hidden');
+        document.getElementById('gdrive-progress-section').classList.add('hidden');
+        this.disabled = false;
+      } else if (!result.success) {
+        showToast('error', result.error || 'Failed to start import');
+        document.getElementById('gdrive-input-section').classList.remove('hidden');
+        document.getElementById('gdrive-progress-section').classList.add('hidden');
+        this.disabled = false;
+      } else {
+        showToast('success', `Import started for ${links.length} file(s)`);
+      }
+    });
+    
+    document.getElementById('gdrive-cancel-btn').addEventListener('click', async function() {
+      if (videoDriveManager) {
+        await videoDriveManager.cancelAll();
+        showToast('info', 'Import cancelled');
+      }
+    });
+    
+    document.getElementById('gdrive-retry-btn').addEventListener('click', async function() {
+      if (videoDriveManager && videoDriveManager.hasFailedFiles()) {
+        document.getElementById('gdrive-complete-section').classList.add('hidden');
+        document.getElementById('gdrive-progress-section').classList.remove('hidden');
+        await videoDriveManager.retryFailed();
+      }
+    });
+    
+    document.getElementById('gdrive-done-btn').addEventListener('click', function() {
+      if (videoDriveManager) {
+        const counts = videoDriveManager.getStatusCounts();
+        if (counts.completed > 0) {
+          location.reload();
+        } else {
+          closeGDriveModal();
+        }
+      } else {
+        closeGDriveModal();
+      }
+    });
+    
+    function updateVideoDriveFileList() {
+      if (!videoDriveManager) return;
+      const files = videoDriveManager.files;
+      const container = document.getElementById('gdrive-file-list');
+      
+      container.innerHTML = files.map((file, index) => {
+        const statusIcon = getStatusIcon(file.status);
+        const statusColor = getStatusColor(file.status);
+        const shortLink = file.link.length > 50 ? file.link.substring(0, 50) + '...' : file.link;
+        
+        return `
+          <div class="flex items-center gap-3 p-2 bg-dark-700/50 rounded-lg border border-gray-600/30">
+            <div class="w-8 h-8 rounded ${statusColor} flex items-center justify-center flex-shrink-0">
+              <i class="ti ${statusIcon}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-gray-400 truncate">${shortLink}</p>
+              <p class="text-xs ${statusColor}">${file.message}</p>
+              ${file.status === 'downloading' ? `
+                <div class="w-full bg-dark-600 rounded-full h-1 mt-1">
+                  <div class="bg-primary h-1 rounded-full transition-all" style="width: ${file.progress}%"></div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function showVideoDriveComplete(summary) {
+      document.getElementById('gdrive-progress-section').classList.add('hidden');
+      document.getElementById('gdrive-complete-section').classList.remove('hidden');
+      document.getElementById('gdrive-success-count').textContent = summary.success;
+      document.getElementById('gdrive-failed-count').textContent = summary.failed;
+      
+      if (summary.failed > 0) {
+        document.getElementById('gdrive-retry-btn').classList.remove('hidden');
+        // Show failed files
+        const failedFiles = videoDriveManager.files.filter(f => f.status === 'failed');
+        if (failedFiles.length > 0) {
+          const failedList = document.getElementById('gdrive-failed-list');
+          failedList.innerHTML = failedFiles.map(f => `
+            <div class="p-2 bg-red-500/10 rounded border border-red-500/30">
+              <p class="text-xs text-gray-400 truncate">${f.link}</p>
+              <p class="text-xs text-red-400">${f.error || 'Import failed'}</p>
+            </div>
+          `).join('');
+          failedList.classList.remove('hidden');
+        }
+      } else {
+        document.getElementById('gdrive-retry-btn').classList.add('hidden');
+        document.getElementById('gdrive-failed-list').classList.add('hidden');
+      }
+      
+      if (summary.success > 0 && summary.failed === 0) {
+        showToast('success', `${summary.success} video(s) imported successfully`);
+      } else if (summary.success > 0) {
+        showToast('success', `${summary.success} imported, ${summary.failed} failed`);
+      } else {
+        showToast('error', 'All imports failed');
+      }
+    }
+    
+    function resetGDriveModal() {
+      document.getElementById('gdrive-input-section').classList.remove('hidden');
+      document.getElementById('gdrive-progress-section').classList.add('hidden');
+      document.getElementById('gdrive-complete-section').classList.add('hidden');
+      document.getElementById('import-drive-button').disabled = false;
+      document.getElementById('gdrive-links').value = '';
+      document.getElementById('gdrive-link-count').textContent = '0 links entered';
+      document.getElementById('gdrive-validation-errors').classList.add('hidden');
+      document.getElementById('gdrive-file-list').innerHTML = '';
+      videoDriveManager = null;
+    }
+    
+    // Google Drive import (Audio) - Multiple Links Support
+    let audioDriveManager = null;
+    
+    // Update link count on textarea input
+    document.getElementById('gdrive-audio-links').addEventListener('input', function() {
+      const lines = this.value.split(/[\r\n]+/).filter(l => l.trim().length > 0);
+      document.getElementById('gdrive-audio-link-count').textContent = lines.length + ' link(s) entered';
+      document.getElementById('gdrive-audio-validation-errors').classList.add('hidden');
+    });
+    
+    document.getElementById('import-audio-drive-button').addEventListener('click', async function() {
+      const linksText = document.getElementById('gdrive-audio-links').value.trim();
+      if (!linksText) { 
+        showToast('error', 'Please enter at least one Google Drive link'); 
+        return; 
+      }
+      
+      // Initialize manager
+      audioDriveManager = new DriveImportQueueManager({
+        type: 'audio',
+        csrfToken: '<%= csrfToken %>',
+        onProgress: (overallProgress, counts) => {
+          document.getElementById('gdrive-audio-progress-bar').style.width = overallProgress + '%';
+          document.getElementById('gdrive-audio-overall-progress').textContent = overallProgress + '%';
+        },
+        onFileComplete: (file, success) => {
+          updateAudioDriveFileList();
+        },
+        onAllComplete: (summary) => {
+          showAudioDriveComplete(summary);
+        },
+        onQueueUpdate: (files) => {
+          updateAudioDriveFileList();
+        },
+        onValidationError: (invalidLinks) => {
+          const errorList = document.getElementById('gdrive-audio-error-list');
+          errorList.innerHTML = invalidLinks.map(l => `<li>${l.link}: ${l.error}</li>`).join('');
+          document.getElementById('gdrive-audio-validation-errors').classList.remove('hidden');
+        }
+      });
+      
+      const links = audioDriveManager.parseLinks(linksText);
+      if (links.length === 0) {
+        showToast('error', 'No valid links found');
+        return;
+      }
+      
+      this.disabled = true;
+      
+      // Show progress section
+      document.getElementById('gdrive-audio-input-section').classList.add('hidden');
+      document.getElementById('gdrive-audio-progress-section').classList.remove('hidden');
+      document.getElementById('gdrive-audio-complete-section').classList.add('hidden');
+      
+      const result = await audioDriveManager.startImport(links);
+      
+      if (!result.success && result.invalid) {
+        document.getElementById('gdrive-audio-input-section').classList.remove('hidden');
+        document.getElementById('gdrive-audio-progress-section').classList.add('hidden');
+        this.disabled = false;
+      } else if (!result.success) {
+        showToast('error', result.error || 'Failed to start import');
+        document.getElementById('gdrive-audio-input-section').classList.remove('hidden');
+        document.getElementById('gdrive-audio-progress-section').classList.add('hidden');
+        this.disabled = false;
+      } else {
+        showToast('success', `Import started for ${links.length} file(s)`);
+      }
+    });
+    
+    document.getElementById('gdrive-audio-cancel-btn').addEventListener('click', async function() {
+      if (audioDriveManager) {
+        await audioDriveManager.cancelAll();
+        showToast('info', 'Import cancelled');
+      }
+    });
+    
+    document.getElementById('gdrive-audio-retry-btn').addEventListener('click', async function() {
+      if (audioDriveManager && audioDriveManager.hasFailedFiles()) {
+        document.getElementById('gdrive-audio-complete-section').classList.add('hidden');
+        document.getElementById('gdrive-audio-progress-section').classList.remove('hidden');
+        await audioDriveManager.retryFailed();
+      }
+    });
+    
+    document.getElementById('gdrive-audio-done-btn').addEventListener('click', function() {
+      if (audioDriveManager) {
+        const counts = audioDriveManager.getStatusCounts();
+        if (counts.completed > 0) {
+          location.reload();
+        } else {
+          closeAudioGDriveModal();
+        }
+      } else {
+        closeAudioGDriveModal();
+      }
+    });
+    
+    function updateAudioDriveFileList() {
+      if (!audioDriveManager) return;
+      const files = audioDriveManager.files;
+      const container = document.getElementById('gdrive-audio-file-list');
+      
+      container.innerHTML = files.map((file, index) => {
+        const statusIcon = getStatusIcon(file.status);
+        const statusColor = getStatusColor(file.status, 'green');
+        const shortLink = file.link.length > 50 ? file.link.substring(0, 50) + '...' : file.link;
+        
+        return `
+          <div class="flex items-center gap-3 p-2 bg-dark-700/50 rounded-lg border border-gray-600/30">
+            <div class="w-8 h-8 rounded ${statusColor} flex items-center justify-center flex-shrink-0">
+              <i class="ti ${statusIcon}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs text-gray-400 truncate">${shortLink}</p>
+              <p class="text-xs ${statusColor}">${file.message}</p>
+              ${file.status === 'downloading' ? `
+                <div class="w-full bg-dark-600 rounded-full h-1 mt-1">
+                  <div class="bg-green-500 h-1 rounded-full transition-all" style="width: ${file.progress}%"></div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function showAudioDriveComplete(summary) {
+      document.getElementById('gdrive-audio-progress-section').classList.add('hidden');
+      document.getElementById('gdrive-audio-complete-section').classList.remove('hidden');
+      document.getElementById('gdrive-audio-success-count').textContent = summary.success;
+      document.getElementById('gdrive-audio-failed-count').textContent = summary.failed;
+      
+      if (summary.failed > 0) {
+        document.getElementById('gdrive-audio-retry-btn').classList.remove('hidden');
+        const failedFiles = audioDriveManager.files.filter(f => f.status === 'failed');
+        if (failedFiles.length > 0) {
+          const failedList = document.getElementById('gdrive-audio-failed-list');
+          failedList.innerHTML = failedFiles.map(f => `
+            <div class="p-2 bg-red-500/10 rounded border border-red-500/30">
+              <p class="text-xs text-gray-400 truncate">${f.link}</p>
+              <p class="text-xs text-red-400">${f.error || 'Import failed'}</p>
+            </div>
+          `).join('');
+          failedList.classList.remove('hidden');
+        }
+      } else {
+        document.getElementById('gdrive-audio-retry-btn').classList.add('hidden');
+        document.getElementById('gdrive-audio-failed-list').classList.add('hidden');
+      }
+      
+      if (summary.success > 0 && summary.failed === 0) {
+        showToast('success', `${summary.success} audio file(s) imported successfully`);
+      } else if (summary.success > 0) {
+        showToast('success', `${summary.success} imported, ${summary.failed} failed`);
+      } else {
+        showToast('error', 'All imports failed');
+      }
+    }
+    
+    function resetAudioDriveModal() {
+      document.getElementById('gdrive-audio-input-section').classList.remove('hidden');
+      document.getElementById('gdrive-audio-progress-section').classList.add('hidden');
+      document.getElementById('gdrive-audio-complete-section').classList.add('hidden');
+      document.getElementById('import-audio-drive-button').disabled = false;
+      document.getElementById('gdrive-audio-links').value = '';
+      document.getElementById('gdrive-audio-link-count').textContent = '0 links entered';
+      document.getElementById('gdrive-audio-validation-errors').classList.add('hidden');
+      document.getElementById('gdrive-audio-file-list').innerHTML = '';
+      audioDriveManager = null;
+    }
+    
+    // Helper functions for status display
+    function getStatusIcon(status) {
+      switch (status) {
+        case 'pending': return 'ti-clock';
+        case 'downloading': return 'ti-download animate-pulse';
+        case 'processing': return 'ti-loader animate-spin';
+        case 'completed': return 'ti-check';
+        case 'failed': return 'ti-x';
+        default: return 'ti-clock';
+      }
+    }
+    
+    function getStatusColor(status, accent = 'primary') {
+      const accentColor = accent === 'green' ? 'green-500' : 'primary';
+      switch (status) {
+        case 'pending': return 'bg-gray-600/20 text-gray-400';
+        case 'downloading': return `bg-${accentColor}/20 text-${accentColor}`;
+        case 'processing': return `bg-${accentColor}/20 text-${accentColor}`;
+        case 'completed': return 'bg-green-500/20 text-green-400';
+        case 'failed': return 'bg-red-500/20 text-red-400';
+        default: return 'bg-gray-600/20 text-gray-400';
+      }
+    }
+  });
+  
+  // Helper functions for multiple file upload
+  function updateVideoFileListUI() {
+    const files = videoQueueManager.getFiles();
+    const dropzone = document.getElementById('uploadDropzone');
+    const fileList = document.getElementById('videoFileList');
+    const fileItems = document.getElementById('videoFileItems');
+    const fileCount = document.getElementById('videoFileCount');
+    const uploadBtn = document.getElementById('videoUploadButton');
+    
+    if (files.length === 0) {
+      dropzone.classList.remove('hidden');
+      fileList.classList.add('hidden');
+      uploadBtn.disabled = true;
+      return;
+    }
+    
+    dropzone.classList.add('hidden');
+    fileList.classList.remove('hidden');
+    fileCount.textContent = files.length;
+    uploadBtn.disabled = !videoQueueManager.hasPendingFiles() || videoQueueManager.isUploading;
+    
+    fileItems.innerHTML = files.map((file, index) => `
+      <div class="flex items-center gap-3 p-2 bg-dark-700/50 rounded-lg border border-gray-600/30" data-file-id="${file.id}">
+        <div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center flex-shrink-0">
+          <i class="ti ti-video text-primary"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm truncate text-white">${file.name}</p>
+          <div class="flex items-center gap-2 text-xs text-gray-400">
+            <span>${file.formattedSize}</span>
+            ${file.status === 'uploading' ? `<span class="text-primary">${file.progress}%</span>` : ''}
+            ${file.status === 'success' ? '<span class="text-green-400"><i class="ti ti-check"></i> Done</span>' : ''}
+            ${file.status === 'error' ? `<span class="text-red-400"><i class="ti ti-x"></i> ${file.error || 'Failed'}</span>` : ''}
+          </div>
+          ${file.status === 'uploading' ? `
+            <div class="w-full bg-dark-600 rounded-full h-1 mt-1">
+              <div class="bg-primary h-1 rounded-full transition-all" style="width: ${file.progress}%"></div>
+            </div>
+          ` : ''}
+        </div>
+        ${file.status === 'pending' ? `
+          <button type="button" onclick="videoQueueManager.removeFileById('${file.id}'); updateVideoFileListUI();" class="p-1 text-gray-400 hover:text-red-400">
+            <i class="ti ti-x"></i>
+          </button>
+        ` : ''}
+      </div>
+    `).join('');
+  }
+  
+  function updateAudioFileListUI() {
+    const files = audioQueueManager.getFiles();
+    const dropzone = document.getElementById('audioDropzone');
+    const fileList = document.getElementById('audioFileList');
+    const fileItems = document.getElementById('audioFileItems');
+    const fileCount = document.getElementById('audioFileCount');
+    const uploadBtn = document.getElementById('audioUploadButton');
+    
+    if (files.length === 0) {
+      dropzone.classList.remove('hidden');
+      fileList.classList.add('hidden');
+      uploadBtn.disabled = true;
+      return;
+    }
+    
+    dropzone.classList.add('hidden');
+    fileList.classList.remove('hidden');
+    fileCount.textContent = files.length;
+    uploadBtn.disabled = !audioQueueManager.hasPendingFiles() || audioQueueManager.isUploading;
+    
+    fileItems.innerHTML = files.map((file, index) => `
+      <div class="flex items-center gap-3 p-2 bg-dark-700/50 rounded-lg border border-gray-600/30" data-file-id="${file.id}">
+        <div class="w-8 h-8 rounded bg-green-500/20 flex items-center justify-center flex-shrink-0">
+          <i class="ti ti-music text-green-500"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm truncate text-white">${file.name}</p>
+          <div class="flex items-center gap-2 text-xs text-gray-400">
+            <span>${file.formattedSize}</span>
+            ${file.status === 'uploading' ? `<span class="text-green-400">${file.progress}%</span>` : ''}
+            ${file.status === 'success' ? '<span class="text-green-400"><i class="ti ti-check"></i> Done</span>' : ''}
+            ${file.status === 'error' ? `<span class="text-red-400"><i class="ti ti-x"></i> ${file.error || 'Failed'}</span>` : ''}
+          </div>
+          ${file.status === 'uploading' ? `
+            <div class="w-full bg-dark-600 rounded-full h-1 mt-1">
+              <div class="bg-green-500 h-1 rounded-full transition-all" style="width: ${file.progress}%"></div>
+            </div>
+          ` : ''}
+        </div>
+        ${file.status === 'pending' ? `
+          <button type="button" onclick="audioQueueManager.removeFileById('${file.id}'); updateAudioFileListUI();" class="p-1 text-gray-400 hover:text-red-400">
+            <i class="ti ti-x"></i>
+          </button>
+        ` : ''}
+      </div>
+    `).join('');
+  }
+  
+  function cancelAllVideoUploads() {
+    videoQueueManager.cancelAll();
+    updateVideoFileListUI();
+    document.getElementById('videoCancelAllBtn').classList.add('hidden');
+    document.getElementById('videoUploadButton').disabled = false;
+  }
+  
+  function cancelAllAudioUploads() {
+    audioQueueManager.cancelAll();
+    updateAudioFileListUI();
+    document.getElementById('audioCancelAllBtn').classList.add('hidden');
+    document.getElementById('audioUploadButton').disabled = false;
+  }
+  
+  async function retryFailedVideos() {
+    document.getElementById('videoRetryBtn').classList.add('hidden');
+    document.getElementById('videoUploadSummary').classList.add('hidden');
+    document.getElementById('videoCancelAllBtn').classList.remove('hidden');
+    await videoQueueManager.retryFailed();
+  }
+  
+  async function retryFailedAudios() {
+    document.getElementById('audioRetryBtn').classList.add('hidden');
+    document.getElementById('audioUploadSummary').classList.add('hidden');
+    document.getElementById('audioCancelAllBtn').classList.remove('hidden');
+    await audioQueueManager.retryFailed();
+  }
+</script>

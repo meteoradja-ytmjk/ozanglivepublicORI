@@ -1,0 +1,1560 @@
+<% layout('layout') -%>
+
+  <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+    <div>
+      <h2 class="text-2xl font-bold">Settings</h2>
+      <p class="text-gray-400 text-sm mt-1">Manage your account and preferences</p>
+    </div>
+  </div>
+
+  <div class="mb-6 border-b border-gray-700">
+    <!-- Desktop tabs -->
+    <div class="hidden sm:flex flex-wrap -mb-px">
+      <button class="settings-tab active mr-2 py-2 px-4 text-primary border-b-2 border-primary font-medium"
+        data-tab="profile">
+        <i class="ti ti-user mr-2"></i>Profile
+      </button>
+      <button
+        class="settings-tab mr-2 py-2 px-4 text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-700 font-medium"
+        data-tab="security">
+        <i class="ti ti-shield-lock mr-2"></i>Security
+      </button>
+      <button
+        class="settings-tab mr-2 py-2 px-4 text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-700 font-medium"
+        data-tab="backup">
+        <i class="ti ti-database-export mr-2"></i>Backup
+      </button>
+      <% if (req.session.user_role==='admin' ) { %>
+        <button
+          class="settings-tab mr-2 py-2 px-4 text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-700 font-medium"
+          data-tab="system">
+          <i class="ti ti-settings mr-2"></i>System
+        </button>
+        <button
+          class="settings-tab mr-2 py-2 px-4 text-gray-400 hover:text-white border-b-2 border-transparent hover:border-gray-700 font-medium"
+          data-tab="update">
+          <i class="ti ti-refresh mr-2"></i>Update
+        </button>
+        <% } %>
+    </div>
+
+    <!-- Mobile tabs - grid rata kanan kiri -->
+    <% if (req.session.user_role==='admin' ) { %>
+      <div class="sm:hidden grid grid-cols-5 -mb-px">
+        <% } else { %>
+          <div class="sm:hidden grid grid-cols-3 -mb-px">
+            <% } %>
+              <button
+                class="settings-tab active py-3 flex flex-col items-center justify-center text-primary border-b-2 border-primary"
+                data-tab="profile">
+                <i class="ti ti-user text-lg mb-1"></i>
+                <span class="text-xs font-medium">Profile</span>
+              </button>
+              <button
+                class="settings-tab py-3 flex flex-col items-center justify-center text-gray-400 border-b-2 border-transparent"
+                data-tab="security">
+                <i class="ti ti-shield-lock text-lg mb-1"></i>
+                <span class="text-xs font-medium">Security</span>
+              </button>
+              <button
+                class="settings-tab py-3 flex flex-col items-center justify-center text-gray-400 border-b-2 border-transparent"
+                data-tab="backup">
+                <i class="ti ti-database-export text-lg mb-1"></i>
+                <span class="text-xs font-medium">Backup</span>
+              </button>
+              <% if (req.session.user_role==='admin' ) { %>
+                <button
+                  class="settings-tab py-3 flex flex-col items-center justify-center text-gray-400 border-b-2 border-transparent"
+                  data-tab="system">
+                  <i class="ti ti-settings text-lg mb-1"></i>
+                  <span class="text-xs font-medium">System</span>
+                </button>
+                <button
+                  class="settings-tab py-3 flex flex-col items-center justify-center text-gray-400 border-b-2 border-transparent"
+                  data-tab="update">
+                  <i class="ti ti-refresh text-lg mb-1"></i>
+                  <span class="text-xs font-medium">Update</span>
+                </button>
+                <% } %>
+          </div>
+      </div>
+
+      <div class="bg-gray-800 rounded-lg overflow-hidden">
+
+        <div id="profile-tab" class="settings-content">
+          <div class="p-6">
+            <h3 class="text-lg font-semibold mb-6">Profile Settings</h3>
+            <form id="profile-form" class="space-y-6" action="/settings/profile" method="post"
+              enctype="multipart/form-data">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="activeTab" value="profile">
+
+              <div class="space-y-4">
+                <label class="block text-sm font-medium text-gray-300">Profile Photo</label>
+                <div class="flex items-center space-x-6">
+                  <div class="relative">
+                    <div class="w-24 h-24 rounded-full bg-dark-700 overflow-hidden border-2 border-gray-700">
+                      <img id="profile-preview" src="<%= user.avatar_path || '/images/default-avatar.jpg' %>"
+                        class="w-full h-full object-cover" alt="Profile Photo"
+                        onerror="this.src='/images/default-avatar.jpg'">
+                    </div>
+                    <div class="absolute bottom-0 right-0">
+                      <label for="profile-upload"
+                        class="flex items-center justify-center w-8 h-8 rounded-full bg-primary hover:bg-secondary cursor-pointer shadow-lg transition-colors">
+                        <i class="ti ti-pencil text-white text-sm"></i>
+                      </label>
+                      <input id="profile-upload" name="avatar" type="file" accept="image/*" class="hidden">
+                    </div>
+                  </div>
+                  <div class="text-sm text-gray-400">
+                    <p>Upload a new photo</p>
+                    <p class="mt-1">Maximum file size: 2MB</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label for="username" class="block text-sm font-medium text-gray-300">Username</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="ti ti-user"></i>
+                  </span>
+                  <input type="text" id="username" name="username"
+                    class="bg-dark-900 text-white pl-10 pr-4 py-2 rounded-lg block w-full sm:max-w-md focus:outline-none focus:ring-1 focus:ring-primary"
+                    value="<%= user.username %>">
+                </div>
+              </div>
+
+              <div class="pt-4">
+                <button type="submit"
+                  class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors">
+                  Save Profile Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div id="security-tab" class="settings-content hidden">
+          <div class="p-6">
+            <h3 class="text-lg font-semibold mb-6">Security Settings</h3>
+            <form id="password-form" class="space-y-6" action="/settings/password" method="post">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="activeTab" value="security">
+
+              <div class="space-y-2">
+                <label for="current-password" class="block text-sm font-medium text-gray-300">Current Password</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="ti ti-lock"></i>
+                  </span>
+                  <input type="password" id="current-password" name="currentPassword"
+                    class="bg-dark-900 text-white pl-10 pr-4 py-2 rounded-lg block w-full sm:max-w-md focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Enter your current password">
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label for="new-password" class="block text-sm font-medium text-gray-300">New Password</label>
+                <div class="relative sm:max-w-md">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="ti ti-lock"></i>
+                  </span>
+                  <input type="password" id="new-password" name="newPassword"
+                    class="bg-dark-900 text-white pl-10 pr-10 py-2 rounded-lg block w-full focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Enter new password">
+                  <button type="button"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-white"
+                    id="toggle-password">
+                    <i class="ti ti-eye"></i>
+                  </button>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">
+                  Password must be at least 8 characters and include uppercase, lowercase and a number
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label for="confirm-password" class="block text-sm font-medium text-gray-300">Confirm New
+                  Password</label>
+                <div class="relative sm:max-w-md">
+                  <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="ti ti-lock"></i>
+                  </span>
+                  <input type="password" id="confirm-password" name="confirmPassword"
+                    class="bg-dark-900 text-white pl-10 pr-4 py-2 rounded-lg block w-full focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Confirm new password">
+                </div>
+              </div>
+
+              <div class="pt-4">
+                <button type="submit"
+                  class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors">
+                  Change Password
+                </button>
+              </div>
+            </form>
+
+          </div>
+        </div>
+
+        <!-- Backup & Restore Tab -->
+        <div id="backup-tab" class="settings-content hidden">
+          <div class="p-6">
+            <h3 class="text-lg font-semibold mb-6">Backup & Restore</h3>
+
+            <div class="space-y-6">
+              <!-- Export Section -->
+              <div class="bg-dark-700 rounded-lg p-4">
+                <h4 class="text-md font-medium mb-4 flex items-center">
+                  <i class="ti ti-download mr-2 text-primary"></i>
+                  Export Data
+                </h4>
+                <p class="text-sm text-gray-400 mb-4">
+                  Export semua data Anda termasuk streams, YouTube credentials, broadcast templates, recurring
+                  schedules, stream templates, playlists, title manager, dan thumbnail files.
+                </p>
+                <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3 mb-4">
+                  <p class="text-xs text-yellow-400">
+                    <i class="ti ti-info-circle mr-1"></i>
+                    <strong>Catatan:</strong> Jika Anda memiliki banyak thumbnail files, beberapa mungkin di-skip untuk
+                    menjaga ukuran file export tetap wajar (max 30MB untuk thumbnails). Template mapping akan tetap
+                    di-export.
+                  </p>
+                </div>
+
+                <div class="space-y-4">
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Pilih kategori untuk di-export:</label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="streams" checked>
+                        <span>Streams</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="youtube_credentials" checked>
+                        <span>YouTube Credentials</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="broadcast_templates" checked>
+                        <span>Broadcast Templates</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="recurring_schedules" checked>
+                        <span>Recurring Schedules</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="stream_templates" checked>
+                        <span>Stream Templates</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="playlists" checked>
+                        <span>Playlists</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="title_folders" checked>
+                        <span>Title Folders</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="title_suggestions" checked>
+                        <span>Title Manager</span>
+                      </label>
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox"
+                          class="export-category rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary"
+                          value="thumbnail_files" checked>
+                        <span>Thumbnail Files</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="flex gap-3">
+                    <button type="button" id="export-all-btn"
+                      class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors flex items-center">
+                      <i class="ti ti-download mr-2"></i>
+                      Export Semua Data
+                    </button>
+                    <button type="button" id="select-all-categories"
+                      class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors text-sm">
+                      Pilih Semua
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Import Section -->
+              <div class="bg-dark-700 rounded-lg p-4">
+                <h4 class="text-md font-medium mb-4 flex items-center">
+                  <i class="ti ti-upload mr-2 text-green-400"></i>
+                  Import Data
+                </h4>
+                <p class="text-sm text-gray-400 mb-4">
+                  Restore data dari file backup JSON. Data yang sudah ada dapat di-skip atau di-overwrite.
+                </p>
+
+                <form id="import-all-form" enctype="multipart/form-data" class="space-y-4">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-300">File Backup</label>
+                    <div class="flex items-center gap-3">
+                      <input type="file" id="import-file" name="backupFile" accept=".json"
+                        class="bg-dark-900 text-white px-4 py-2 rounded-lg w-full max-w-md focus:outline-none focus:ring-1 focus:ring-primary file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-primary file:text-white file:cursor-pointer">
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Opsi Import:</label>
+                    <div class="flex flex-col gap-2">
+                      <label class="flex items-center space-x-2 text-sm text-gray-300">
+                        <input type="checkbox" id="skip-duplicates" name="skipDuplicates" checked
+                          class="rounded bg-dark-900 border-gray-600 text-primary focus:ring-primary">
+                        <span>Skip data duplikat (berdasarkan nama/channel)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <button type="submit" id="import-all-btn"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors flex items-center">
+                    <i class="ti ti-upload mr-2"></i>
+                    Import Data
+                  </button>
+                </form>
+
+                <!-- Import Results -->
+                <div id="import-results" class="hidden mt-4 p-4 bg-dark-900 rounded-lg">
+                  <h5 class="text-sm font-medium text-gray-300 mb-2">Hasil Import:</h5>
+                  <div id="import-results-content" class="text-sm text-gray-400"></div>
+                </div>
+              </div>
+
+              <!-- Legacy Export (Streams Only) -->
+              <div class="bg-dark-700 rounded-lg p-4">
+                <h4 class="text-md font-medium mb-4 flex items-center">
+                  <i class="ti ti-broadcast mr-2 text-yellow-400"></i>
+                  Export Streams Saja (Legacy)
+                </h4>
+                <p class="text-sm text-gray-400 mb-4">
+                  Export hanya konfigurasi streams untuk kompatibilitas dengan format backup lama.
+                </p>
+                <a href="/api/streams/export"
+                  class="inline-flex items-center px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-colors">
+                  <i class="ti ti-download mr-2"></i>
+                  Export Streams
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <% if (req.session.user_role==='admin' ) { %>
+          <div id="system-tab" class="settings-content hidden">
+            <div class="p-6">
+              <h3 class="text-lg font-semibold mb-6">System Settings</h3>
+
+              <div class="space-y-6">
+                <div class="bg-dark-700 rounded-lg p-4">
+                  <h4 class="text-md font-medium mb-4 flex items-center">
+                    <i class="ti ti-broadcast mr-2 text-primary"></i>
+                    Live Streaming Limits
+                  </h4>
+                  <p class="text-sm text-gray-400 mb-4">
+                    Control the maximum number of simultaneous live streams per member.
+                    Individual users can have custom limits set in User Management.
+                  </p>
+
+                  <div class="space-y-4">
+                    <div class="space-y-2">
+                      <label for="default-live-limit" class="block text-sm font-medium text-gray-300">
+                        Default Live Limit (per member)
+                      </label>
+                      <div class="flex items-center gap-3">
+                        <input type="number" id="default-live-limit" min="1" max="100" value="1"
+                          class="bg-dark-900 text-white px-4 py-2 rounded-lg w-24 focus:outline-none focus:ring-1 focus:ring-primary">
+                        <button type="button" id="save-live-limit"
+                          class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors">
+                          Save
+                        </button>
+                      </div>
+                      <p class="text-xs text-gray-500">
+                        Members without a custom limit will use this default value.
+                      </p>
+                    </div>
+
+                    <div class="space-y-2 mt-6 pt-6 border-t border-gray-700">
+                      <label for="default-storage-limit" class="block text-sm font-medium text-gray-300">
+                        Default Storage Limit (per member)
+                      </label>
+                      <div class="flex items-center gap-3">
+                        <input type="number" id="default-storage-limit-value" min="0" placeholder="0"
+                          class="bg-dark-900 text-white px-4 py-2 rounded-lg w-24 focus:outline-none focus:ring-1 focus:ring-primary">
+                        <select id="default-storage-limit-unit"
+                          class="bg-dark-900 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary">
+                          <option value="1073741824">GB</option>
+                          <option value="1048576">MB</option>
+                          <option value="1099511627776">TB</option>
+                        </select>
+                        <button type="button" id="save-storage-limit"
+                          class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors">
+                          Save
+                        </button>
+                      </div>
+                      <p class="text-xs text-gray-500">
+                        Set to 0 for unlimited storage. New members will use this default value.
+                      </p>
+                      <p class="text-xs text-gray-400" id="current-default-storage-limit"></p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- User Registration Settings -->
+                <div class="bg-dark-700 rounded-lg p-4">
+                  <h4 class="text-md font-medium mb-4 flex items-center">
+                    <i class="ti ti-user-plus mr-2 text-green-400"></i>
+                    User Registration Settings
+                  </h4>
+                  <p class="text-sm text-gray-400 mb-4">
+                    Configure how new user registrations are handled.
+                  </p>
+
+                  <div class="space-y-4">
+                    <!-- Auto-Approve Toggle -->
+                    <div class="flex items-center justify-between py-2">
+                      <div>
+                        <label class="text-sm font-medium text-gray-300">Auto-Approve New Users</label>
+                        <p class="text-xs text-gray-500">When enabled, new users will be automatically activated without
+                          admin approval</p>
+                      </div>
+                      <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="auto-approve-toggle" class="sr-only peer">
+                        <div
+                          class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary">
+                        </div>
+                      </label>
+                    </div>
+
+                    <!-- Default Live Limit for Registration -->
+                    <div class="space-y-2 pt-4 border-t border-gray-700">
+                      <label for="default-live-limit-reg" class="block text-sm font-medium text-gray-300">
+                        Default Live Limit for New Users
+                      </label>
+                      <div class="flex items-center gap-3">
+                        <input type="number" id="default-live-limit-reg" min="0" max="100" value="0"
+                          class="bg-dark-900 text-white px-4 py-2 rounded-lg w-24 focus:outline-none focus:ring-1 focus:ring-primary">
+                        <button type="button" id="save-live-limit-reg"
+                          class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors">
+                          Save
+                        </button>
+                      </div>
+                      <p class="text-xs text-gray-500">
+                        Set to 0 for unlimited. This limit will be applied to new user registrations.
+                      </p>
+                      <p class="text-xs text-gray-400" id="current-live-limit-reg"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Update Tab -->
+          <div id="update-tab" class="settings-content hidden">
+            <div class="p-4 sm:p-6">
+
+              <!-- Version Cards -->
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-dark-700 rounded-xl p-4 text-center">
+                  <p class="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Current</p>
+                  <p class="text-xl font-bold text-white" id="current-version">--</p>
+                </div>
+                <div class="bg-dark-700 rounded-xl p-4 text-center">
+                  <p class="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Latest</p>
+                  <p class="text-xl font-bold text-gray-400" id="latest-version">--</p>
+                </div>
+              </div>
+
+              <!-- Check Update Button -->
+              <button type="button" id="check-update-btn"
+                class="w-full py-3 bg-dark-700 hover:bg-dark-600 text-white rounded-xl transition-all flex items-center justify-center gap-2 mb-4">
+                <i class="ti ti-refresh text-lg"></i>
+                <span>Check for Updates</span>
+              </button>
+
+              <!-- Update Status -->
+              <div id="update-status-container" class="hidden">
+
+                <!-- Update Available -->
+                <div id="update-available" class="hidden">
+                  <div
+                    class="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4 mb-4">
+                    <div class="flex items-center gap-3 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <i class="ti ti-sparkles text-green-400"></i>
+                      </div>
+                      <div>
+                        <p class="font-medium text-green-400">Update Available</p>
+                        <p class="text-xs text-gray-400">New version ready to install</p>
+                      </div>
+                    </div>
+
+                    <!-- Changelog -->
+                    <div id="changelog-container" class="hidden mb-4">
+                      <div id="changelog-content"
+                        class="bg-dark-900/50 rounded-lg p-3 text-xs text-gray-300 max-h-32 overflow-y-auto space-y-1">
+                      </div>
+                    </div>
+
+                    <button type="button" id="perform-update-btn"
+                      class="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-all flex items-center justify-center gap-2 font-medium">
+                      <i class="ti ti-download"></i>
+                      <span>Update Now</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Conflict Resolution -->
+                <div id="update-conflict" class="hidden">
+                  <div
+                    class="bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 rounded-xl p-4 mb-4">
+                    <div class="flex items-center gap-3 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                        <i class="ti ti-alert-triangle text-yellow-400"></i>
+                      </div>
+                      <div>
+                        <p class="font-medium text-yellow-400">Local Changes Detected</p>
+                        <p class="text-xs text-gray-400" id="conflict-message">Your local changes would be overwritten
+                          by the update</p>
+                      </div>
+                    </div>
+
+                    <!-- Conflict Log -->
+                    <div id="conflict-log"
+                      class="bg-dark-900/50 rounded-lg p-3 text-xs text-gray-300 max-h-24 overflow-y-auto mb-4 font-mono">
+                    </div>
+
+                    <p class="text-xs text-gray-400 mb-3">Choose how to proceed:</p>
+
+                    <div class="space-y-2">
+                      <button type="button" id="update-stash-btn"
+                        class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center justify-center gap-2 font-medium text-sm">
+                        <i class="ti ti-archive"></i>
+                        <span>Stash & Update</span>
+                      </button>
+                      <p class="text-[10px] text-gray-500 text-center mb-2">Save your changes temporarily, update, then
+                        restore them</p>
+
+                      <button type="button" id="update-force-btn"
+                        class="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all flex items-center justify-center gap-2 font-medium text-sm">
+                        <i class="ti ti-trash"></i>
+                        <span>Force Update</span>
+                      </button>
+                      <p class="text-[10px] text-gray-500 text-center mb-2">Discard all local changes and update (cannot
+                        be undone)</p>
+
+                      <button type="button" id="update-cancel-btn"
+                        class="w-full py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-all flex items-center justify-center gap-2 text-sm">
+                        <i class="ti ti-x"></i>
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Up to Date -->
+                <div id="update-uptodate" class="hidden">
+                  <div
+                    class="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4 text-center">
+                    <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                      <i class="ti ti-check text-green-400 text-xl"></i>
+                    </div>
+                    <p class="font-medium text-green-400">You're up to date!</p>
+                    <p class="text-xs text-gray-400 mt-1">Running the latest version</p>
+                  </div>
+                </div>
+
+                <!-- Error -->
+                <div id="update-error" class="hidden">
+                  <div
+                    class="bg-gradient-to-br from-red-500/10 to-rose-500/5 border border-red-500/20 rounded-xl p-4 text-center">
+                    <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-3">
+                      <i class="ti ti-alert-triangle text-red-400 text-xl"></i>
+                    </div>
+                    <p class="font-medium text-red-400">Check Failed</p>
+                    <p class="text-xs text-gray-400 mt-1" id="update-error-message">Unable to check for updates</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Update Progress -->
+              <div id="update-progress-container" class="hidden">
+                <div class="bg-dark-700 rounded-xl p-4">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <i class="ti ti-loader animate-spin text-primary"></i>
+                    </div>
+                    <div>
+                      <p class="font-medium text-white text-sm">Updating...</p>
+                      <p class="text-xs text-gray-400" id="update-progress-text">Preparing</p>
+                    </div>
+                  </div>
+                  <div class="w-full bg-dark-900 rounded-full h-1.5 mb-3">
+                    <div id="update-progress-bar" class="bg-primary h-1.5 rounded-full transition-all duration-500"
+                      style="width: 0%"></div>
+                  </div>
+                  <div id="update-log"
+                    class="bg-dark-900 rounded-lg p-2 text-[10px] text-gray-500 font-mono max-h-24 overflow-y-auto">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Update Complete -->
+              <div id="update-complete-container" class="hidden">
+                <div
+                  class="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4 text-center">
+                  <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                    <i class="ti ti-check text-green-400 text-xl"></i>
+                  </div>
+                  <p class="font-medium text-green-400">Update Complete!</p>
+                  <p class="text-xs text-gray-400 mt-1 mb-4">Restarting application...</p>
+                  <button type="button" id="reload-page-btn"
+                    class="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-all text-sm">
+                    <i class="ti ti-refresh mr-1"></i>Reload
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <% } %>
+
+      </div>
+
+      <div id="toast"
+        class="fixed top-16 right-4 bg-dark-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 hidden flex items-center">
+        <i id="toast-icon" class="mr-2"></i>
+        <span id="toast-message"></span>
+      </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const tabs = document.querySelectorAll('.settings-tab');
+          const tabContents = document.querySelectorAll('.settings-content');
+          function activateTab(tabName) {
+            tabs.forEach(tab => tab.classList.remove('active', 'text-primary', 'border-primary'));
+            tabs.forEach(tab => tab.classList.add('text-gray-400', 'border-transparent'));
+            tabContents.forEach(content => content.classList.add('hidden'));
+            const selectedTab = document.querySelector(`.settings-tab[data-tab="${tabName}"]`);
+            if (selectedTab) {
+              selectedTab.classList.add('active', 'text-primary', 'border-primary');
+              selectedTab.classList.remove('text-gray-400', 'border-transparent');
+              const selectedContent = document.getElementById(`${tabName}-tab`);
+              if (selectedContent) {
+                selectedContent.classList.remove('hidden');
+              }
+            }
+          }
+          tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+              const tabName = tab.getAttribute('data-tab');
+              activateTab(tabName);
+            });
+          });
+    <% if (typeof activeTab !== 'undefined' && activeTab) { %>
+            activateTab('<%= activeTab %>');
+    <% } else { %>
+            activateTab('profile');
+    <% } %>
+    const profileUpload = document.getElementById('profile-upload');
+          const profilePreview = document.getElementById('profile-preview');
+          profileUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              if (file.size > 2 * 1024 * 1024) {
+                showToast('error', 'Image too large. Maximum size is 2MB.');
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = function (event) {
+                profilePreview.src = event.target.result;
+              };
+              reader.readAsDataURL(file);
+            }
+          });
+          const profileForm = document.getElementById('profile-form');
+          profileForm.addEventListener('submit', (e) => {
+            const fileInput = document.getElementById('profile-upload');
+            if (fileInput.files.length > 0) {
+              const file = fileInput.files[0];
+              if (file.size > 2 * 1024 * 1024) {
+                e.preventDefault();
+                showToast('error', 'Image too large. Maximum size is 2MB.');
+                return false;
+              }
+            }
+          });
+          const passwordForm = document.getElementById('password-form');
+          passwordForm.addEventListener('submit', (e) => {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            if (!currentPassword) {
+              e.preventDefault();
+              showToast('error', 'Please enter your current password.');
+              return false;
+            }
+            if (!newPassword) {
+              e.preventDefault();
+              showToast('error', 'Please enter a new password.');
+              return false;
+            }
+            if (newPassword !== confirmPassword) {
+              e.preventDefault();
+              showToast('error', 'New passwords do not match.');
+              return false;
+            }
+          });
+
+          const togglePassword = document.getElementById('toggle-password');
+          const newPasswordField = document.getElementById('new-password');
+          togglePassword.addEventListener('click', () => {
+            if (newPasswordField.type === 'password') {
+              newPasswordField.type = 'text';
+              togglePassword.innerHTML = '<i class="ti ti-eye-off"></i>';
+            } else {
+              newPasswordField.type = 'password';
+              togglePassword.innerHTML = '<i class="ti ti-eye"></i>';
+            }
+          });
+
+          function showToast(type, message) {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMessage = document.getElementById('toast-message');
+            if (type === 'success') {
+              toastIcon.className = 'ti ti-check text-green-400 text-xl mr-2 font-loaded';
+              toast.classList.add('border-l-4', 'border-green-400');
+              toast.classList.remove('border-l-4', 'border-red-400');
+            } else if (type === 'error') {
+              toastIcon.className = 'ti ti-x text-red-400 text-xl mr-2 font-loaded';
+              toast.classList.add('border-l-4', 'border-red-400');
+              toast.classList.remove('border-l-4', 'border-green-400');
+            }
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+              toast.classList.add('hidden');
+            }, 3000);
+          }
+    <% if (typeof success !== 'undefined' && success) { %>
+            showToast('success', '<%= success %>');
+    <% } %>
+    <% if (typeof error !== 'undefined' && error) { %>
+            showToast('error', '<%= error %>');
+    <% } %>
+
+      // Live Limit Settings (Admin only)
+      <% if (req.session.user_role === 'admin') { %>
+      const liveLimitInput = document.getElementById('default-live-limit');
+            const saveLiveLimitBtn = document.getElementById('save-live-limit');
+
+            // Load current live limit
+            fetch('/api/settings/live-limit')
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  liveLimitInput.value = data.defaultLimit;
+                }
+              })
+              .catch(err => console.error('Error loading live limit:', err));
+
+            // Save live limit
+            saveLiveLimitBtn.addEventListener('click', async () => {
+              const limit = parseInt(liveLimitInput.value, 10);
+              if (isNaN(limit) || limit < 1) {
+                showToast('error', 'Live limit must be at least 1');
+                return;
+              }
+
+              try {
+                const res = await fetch('/api/settings/live-limit', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '<%= csrfToken %>'
+                  },
+                  body: JSON.stringify({ limit })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  showToast('success', 'Live limit updated successfully');
+                } else {
+                  showToast('error', data.message || 'Failed to update live limit');
+                }
+              } catch (err) {
+                console.error('Error saving live limit:', err);
+                showToast('error', 'Failed to update live limit');
+              }
+            });
+
+            // Storage Limit Settings
+            const storageLimitValue = document.getElementById('default-storage-limit-value');
+            const storageLimitUnit = document.getElementById('default-storage-limit-unit');
+            const saveStorageLimitBtn = document.getElementById('save-storage-limit');
+            const currentStorageLimitText = document.getElementById('current-default-storage-limit');
+
+            // Load current storage limit
+            fetch('/api/settings/default-storage-limit')
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  if (data.defaultLimit && data.defaultLimit > 0) {
+                    // Convert bytes to appropriate unit
+                    if (data.defaultLimit >= 1099511627776) { // TB
+                      storageLimitValue.value = Math.round(data.defaultLimit / 1099511627776);
+                      storageLimitUnit.value = '1099511627776';
+                    } else if (data.defaultLimit >= 1073741824) { // GB
+                      storageLimitValue.value = Math.round(data.defaultLimit / 1073741824);
+                      storageLimitUnit.value = '1073741824';
+                    } else { // MB
+                      storageLimitValue.value = Math.round(data.defaultLimit / 1048576);
+                      storageLimitUnit.value = '1048576';
+                    }
+                    currentStorageLimitText.textContent = `Current: ${data.formatted}`;
+                  } else {
+                    storageLimitValue.value = '';
+                    currentStorageLimitText.textContent = 'Current: Unlimited';
+                  }
+                }
+              })
+              .catch(err => console.error('Error loading storage limit:', err));
+
+            // Save storage limit
+            saveStorageLimitBtn.addEventListener('click', async () => {
+              const value = parseInt(storageLimitValue.value) || 0;
+              const unit = parseInt(storageLimitUnit.value);
+              const limit = value > 0 ? value * unit : null;
+
+              try {
+                const res = await fetch('/api/settings/default-storage-limit', {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '<%= csrfToken %>'
+                  },
+                  body: JSON.stringify({ limit })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  showToast('success', 'Default storage limit updated successfully');
+                  // Update display
+                  if (limit) {
+                    const formatted = formatBytes(limit);
+                    currentStorageLimitText.textContent = `Current: ${formatted}`;
+                  } else {
+                    currentStorageLimitText.textContent = 'Current: Unlimited';
+                  }
+                } else {
+                  showToast('error', data.message || 'Failed to update storage limit');
+                }
+              } catch (err) {
+                console.error('Error saving storage limit:', err);
+                showToast('error', 'Failed to update storage limit');
+              }
+            });
+
+            function formatBytes(bytes) {
+              if (bytes === 0) return '0 Bytes';
+              const k = 1024;
+              const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // Auto-Approve Registration Settings
+            const autoApproveToggle = document.getElementById('auto-approve-toggle');
+            const liveLimitRegInput = document.getElementById('default-live-limit-reg');
+            const saveLiveLimitRegBtn = document.getElementById('save-live-limit-reg');
+            const currentLiveLimitRegText = document.getElementById('current-live-limit-reg');
+
+            // Load auto-approve setting
+            fetch('/api/settings/auto-approve')
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  autoApproveToggle.checked = data.enabled;
+                }
+              })
+              .catch(err => console.error('Error loading auto-approve setting:', err));
+
+            // Save auto-approve setting on toggle
+            autoApproveToggle.addEventListener('change', async () => {
+              try {
+                const res = await fetch('/api/settings/auto-approve', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '<%= csrfToken %>'
+                  },
+                  body: JSON.stringify({ enabled: autoApproveToggle.checked })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  showToast('success', autoApproveToggle.checked ? 'Auto-approve enabled' : 'Auto-approve disabled');
+                } else {
+                  showToast('error', data.message || 'Failed to update auto-approve setting');
+                  autoApproveToggle.checked = !autoApproveToggle.checked; // Revert on error
+                }
+              } catch (err) {
+                console.error('Error saving auto-approve setting:', err);
+                showToast('error', 'Failed to update auto-approve setting');
+                autoApproveToggle.checked = !autoApproveToggle.checked; // Revert on error
+              }
+            });
+
+            // Load default live limit for registration
+            fetch('/api/settings/default-live-limit-registration')
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  liveLimitRegInput.value = data.limit;
+                  currentLiveLimitRegText.textContent = data.isUnlimited ? 'Current: Unlimited' : `Current: ${data.limit}`;
+                }
+              })
+              .catch(err => console.error('Error loading default live limit for registration:', err));
+
+            // Save default live limit for registration
+            saveLiveLimitRegBtn.addEventListener('click', async () => {
+              const limit = parseInt(liveLimitRegInput.value, 10) || 0;
+              if (limit < 0) {
+                showToast('error', 'Live limit cannot be negative');
+                return;
+              }
+
+              try {
+                const res = await fetch('/api/settings/default-live-limit-registration', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '<%= csrfToken %>'
+                  },
+                  body: JSON.stringify({ limit })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  showToast('success', data.message);
+                  currentLiveLimitRegText.textContent = data.isUnlimited ? 'Current: Unlimited' : `Current: ${data.limit}`;
+                } else {
+                  showToast('error', data.message || 'Failed to update default live limit');
+                }
+              } catch (err) {
+                console.error('Error saving default live limit for registration:', err);
+                showToast('error', 'Failed to update default live limit');
+              }
+            });
+      <% } %>
+
+      // Backup & Restore functionality
+      const exportAllBtn = document.getElementById('export-all-btn');
+          const selectAllCategoriesBtn = document.getElementById('select-all-categories');
+          const importAllForm = document.getElementById('import-all-form');
+          const importResults = document.getElementById('import-results');
+          const importResultsContent = document.getElementById('import-results-content');
+
+          // Select all categories
+          selectAllCategoriesBtn.addEventListener('click', () => {
+            const checkboxes = document.querySelectorAll('.export-category');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            selectAllCategoriesBtn.textContent = allChecked ? 'Pilih Semua' : 'Hapus Semua';
+          });
+
+          // Export all data
+          exportAllBtn.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.export-category:checked');
+            const categories = Array.from(checkboxes).map(cb => cb.value);
+
+            console.log('[Export] Selected categories:', categories);
+
+            if (categories.length === 0) {
+              showToast('error', 'Pilih minimal satu kategori untuk di-export');
+              return;
+            }
+
+            exportAllBtn.disabled = true;
+            exportAllBtn.innerHTML = '<i class="ti ti-loader animate-spin mr-2"></i>Exporting...';
+
+            try {
+              console.log('[Export] Sending request to /api/backup/export-all');
+
+              const res = await fetch('/api/backup/export-all', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': '<%= csrfToken %>'
+                },
+                body: JSON.stringify({ categories })
+              });
+
+              console.log('[Export] Response status:', res.status, res.statusText);
+              console.log('[Export] Response headers:', Object.fromEntries(res.headers.entries()));
+
+              if (!res.ok) {
+                const contentType = res.headers.get('content-type');
+                let errorMessage = 'Export failed';
+
+                if (contentType && contentType.includes('application/json')) {
+                  const errorData = await res.json();
+                  errorMessage = errorData.error || errorMessage;
+                } else {
+                  const errorText = await res.text();
+                  console.error('[Export] Error response:', errorText);
+                  errorMessage = errorText || errorMessage;
+                }
+
+                throw new Error(errorMessage);
+              }
+
+              console.log('[Export] Creating download blob');
+              const blob = await res.blob();
+              console.log('[Export] Blob size:', blob.size, 'bytes');
+
+              // Try to parse the blob as JSON to check for warnings
+              try {
+                const text = await blob.text();
+                const data = JSON.parse(text);
+
+                // Check for skipped thumbnail files
+                if (data.metadata && data.metadata.counts && data.metadata.counts.thumbnail_skipped_files > 0) {
+                  console.warn('[Export] Warning: Some thumbnail files were skipped due to size limit');
+                  showToast('warning', `Export berhasil, tetapi ${data.metadata.counts.thumbnail_skipped_files} thumbnail files di-skip karena ukuran terlalu besar`);
+                }
+
+                // Re-create blob from text for download
+                const newBlob = new Blob([text], { type: 'application/json' });
+                const url = window.URL.createObjectURL(newBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ozanglive-full-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+              } catch (parseError) {
+                // If parsing fails, just download the blob as-is
+                console.log('[Export] Could not parse response as JSON, downloading as-is');
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ozanglive-full-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+              }
+
+              console.log('[Export] Download triggered successfully');
+              if (!document.querySelector('.toast-warning')) {
+                showToast('success', 'Data berhasil di-export');
+              }
+            } catch (err) {
+              console.error('[Export] Error:', err);
+              showToast('error', err.message || 'Gagal export data');
+            } finally {
+              exportAllBtn.disabled = false;
+              exportAllBtn.innerHTML = '<i class="ti ti-download mr-2"></i>Export Semua Data';
+            }
+          });
+
+          // Import all data
+          importAllForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('import-file');
+            if (!fileInput.files.length) {
+              showToast('error', 'Pilih file backup untuk di-import');
+              return;
+            }
+
+            const formData = new FormData();
+            formData.append('backupFile', fileInput.files[0]);
+            formData.append('skipDuplicates', document.getElementById('skip-duplicates').checked);
+
+            const importBtn = document.getElementById('import-all-btn');
+            const importResults = document.getElementById('import-results');
+            const importResultsContent = document.getElementById('import-results-content');
+
+            // Hide previous results
+            importResults.classList.add('hidden');
+
+            // Show and initialize progress bar
+            const progressContainer = document.getElementById('import-progress');
+            const progressBar = document.getElementById('import-progress-bar');
+            const progressPercentage = document.getElementById('import-progress-percentage');
+            const progressText = document.getElementById('import-progress-text');
+
+            if (!progressContainer) {
+              // Create progress container if it doesn't exist
+              const progressHTML = `
+                <div id="import-progress" class="mt-6">
+                  <div class="mb-2 flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-300">Import Progress</span>
+                    <span id="import-progress-percentage" class="text-sm font-medium text-purple-400">0%</span>
+                  </div>
+                  <div class="bg-gray-700 rounded-full h-3 overflow-hidden">
+                    <div id="import-progress-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                  </div>
+                  <p id="import-progress-text" class="text-sm text-gray-400 mt-2 flex items-center">
+                    <i class="ti ti-loader animate-spin mr-2"></i>
+                    <span>Starting import...</span>
+                  </p>
+                </div>
+              `;
+              importBtn.parentElement.insertAdjacentHTML('afterend', progressHTML);
+            } else {
+              progressContainer.classList.remove('hidden');
+              progressBar.style.width = '0%';
+              progressPercentage.textContent = '0%';
+              progressText.innerHTML = '<i class="ti ti-loader animate-spin mr-2"></i><span>Starting import...</span>';
+            }
+
+            importBtn.disabled = true;
+            importBtn.innerHTML = '<i class="ti ti-loader animate-spin mr-2"></i>Importing...';
+
+            // Simulate progress with smooth, continuous animation
+            let progress = 0;
+            const startTime = Date.now();
+
+            const progressInterval = setInterval(() => {
+              const elapsed = Date.now() - startTime;
+
+              // Improved progress calculation to better match actual import time:
+              // - First 3 seconds: 0% → 50% (fast initial progress)
+              // - Next 7 seconds: 50% → 85% (medium speed)
+              // - After 10 seconds: 85% → 98% (slow crawl, never reaches 100%)
+
+              if (elapsed < 3000) {
+                // Fast initial progress (0-3 sec): 0% → 50%
+                progress = Math.min(50, (elapsed / 3000) * 50);
+              } else if (elapsed < 10000) {
+                // Medium progress (3-10 sec): 50% → 85%
+                const phase2Progress = (elapsed - 3000) / 7000;
+                progress = 50 + (phase2Progress * 35);
+              } else {
+                // Slow crawl (10+ sec): 85% → 98%
+                const phase3Progress = Math.min((elapsed - 10000) / 60000, 1); // 60 seconds to reach 98%
+                progress = 85 + (phase3Progress * 13);
+              }
+
+              // Cap at 98% (only jump to 100% when actually complete)
+              progress = Math.min(98, progress);
+
+              const progressBarEl = document.getElementById('import-progress-bar');
+              const progressPercentageEl = document.getElementById('import-progress-percentage');
+              const progressTextEl = document.getElementById('import-progress-text');
+
+              if (progressBarEl) progressBarEl.style.width = `${Math.round(progress)}%`;
+              if (progressPercentageEl) progressPercentageEl.textContent = `${Math.round(progress)}%`;
+
+              // Update status text based on progress
+              let status = 'Preparing import...';
+              if (progress > 10) status = 'Importing data...';
+              if (progress > 30) status = 'Processing streams...';
+              if (progress > 50) status = 'Processing templates...';
+              if (progress > 70) status = 'Processing playlists...';
+              if (progress > 85) status = 'Finalizing import...';
+              if (progress > 95) status = 'Almost done...';
+
+              if (progressTextEl) {
+                progressTextEl.innerHTML = `<i class="ti ti-loader animate-spin mr-2"></i><span>${status}</span>`;
+              }
+            }, 200); // Update every 200ms for smoother animation
+
+            console.log('[Import] Starting import process...');
+            console.log('[Import] File:', fileInput.files[0].name, 'Size:', fileInput.files[0].size, 'bytes');
+
+            try {
+              console.log('[Import] Sending request to /api/backup/import-all');
+              const res = await fetch('/api/backup/import-all', {
+                method: 'POST',
+                headers: {
+                  'X-CSRF-Token': '<%= csrfToken %>'
+                },
+                body: formData
+              });
+
+              console.log('[Import] Request sent, waiting for response...');
+
+              // Check if response is OK
+              if (!res.ok) {
+                console.error('[Import] HTTP error:', res.status, res.statusText);
+
+                // Check content type to determine if it's HTML or JSON
+                const contentType = res.headers.get('content-type');
+
+                if (contentType && contentType.includes('text/html')) {
+                  // Server returned HTML error page
+                  const htmlText = await res.text();
+                  console.error('[Import] Server returned HTML error page:', htmlText.substring(0, 500));
+
+                  // Try to extract error message from HTML
+                  let errorMessage = 'Server error';
+                  if (res.status === 401) {
+                    errorMessage = 'Session expired. Please login again.';
+                  } else if (res.status === 403) {
+                    errorMessage = 'Access denied. Please check your permissions.';
+                  } else if (res.status === 404) {
+                    errorMessage = 'Import endpoint not found. Please contact support.';
+                  } else if (res.status === 413) {
+                    errorMessage = 'File too large. Please reduce file size.';
+                  } else if (res.status >= 500) {
+                    errorMessage = 'Server error. Please try again later.';
+                  }
+
+                  showToast('error', errorMessage);
+                  importResultsContent.innerHTML = `<div class="text-red-400">Error ${res.status}: ${errorMessage}</div>`;
+                  importResults.classList.remove('hidden');
+                  return;
+                }
+
+                // Try to parse JSON error
+                try {
+                  const errorData = await res.json();
+                  showToast('error', errorData.error || 'Import gagal');
+                  if (errorData.details) {
+                    importResultsContent.innerHTML = `<div class="text-red-400">${errorData.details.join('<br>')}</div>`;
+                    importResults.classList.remove('hidden');
+                  }
+                } catch (parseErr) {
+                  showToast('error', `Server error (${res.status})`);
+                }
+                return;
+              }
+
+              // Parse JSON response
+              let data;
+              try {
+                data = await res.json();
+                console.log('[Import] Response received:', data.success ? 'SUCCESS' : 'FAILED');
+                console.log('[Import] Response data:', JSON.stringify(data).substring(0, 200));
+              } catch (parseErr) {
+                console.error('[Import] Failed to parse JSON response:', parseErr);
+                const responseText = await res.text();
+                console.error('[Import] Response text:', responseText.substring(0, 500));
+
+                showToast('error', 'Invalid server response. Please check the file format.');
+                importResultsContent.innerHTML = `<div class="text-red-400">Server returned invalid response. Please try again or contact support.</div>`;
+                importResults.classList.remove('hidden');
+                return;
+              }
+
+              if (data.success) {
+                showToast('success', 'Import berhasil');
+
+                // Show results
+                let resultsHtml = '<ul class="list-disc list-inside space-y-1">';
+                for (const [category, result] of Object.entries(data.results || {})) {
+                  let statusText = `${result.imported} imported`;
+                  if (result.overwritten) {
+                    statusText += `, ${result.overwritten} overwritten`;
+                  }
+                  statusText += `, ${result.skipped} skipped`;
+                  resultsHtml += `<li><strong>${category}:</strong> ${statusText}</li>`;
+                }
+                resultsHtml += '</ul>';
+
+                if (data.warnings && data.warnings.length > 0) {
+                  resultsHtml += '<div class="mt-2 text-yellow-400"><strong>Warnings:</strong><ul class="list-disc list-inside">';
+                  data.warnings.forEach(w => resultsHtml += `<li>${w}</li>`);
+                  resultsHtml += '</ul></div>';
+                }
+
+                importResultsContent.innerHTML = resultsHtml;
+                importResults.classList.remove('hidden');
+              } else {
+                showToast('error', data.error || 'Import gagal');
+                if (data.details) {
+                  importResultsContent.innerHTML = `<div class="text-red-400">${data.details.join('<br>')}</div>`;
+                  importResults.classList.remove('hidden');
+                }
+              }
+            } catch (err) {
+              console.error('[Import] Unexpected error:', err);
+
+              // Handle "Failed to fetch" error specifically
+              let errorMessage = 'Gagal import data';
+              let errorDetails = '';
+
+              if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+                errorMessage = 'Tidak dapat terhubung ke server';
+                errorDetails = `<div class="text-red-400">
+              <p class="font-semibold mb-2">Kemungkinan penyebab:</p>
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <li>Aplikasi server tidak berjalan atau crash</li>
+                <li>Koneksi internet terputus</li>
+                <li>Firewall atau antivirus memblokir koneksi</li>
+                <li>Port aplikasi tidak dapat diakses</li>
+              </ul>
+              <p class="mt-3 text-sm">
+                <strong>Solusi:</strong><br>
+                1. Periksa apakah aplikasi masih berjalan (cek PM2 atau terminal)<br>
+                2. Coba refresh halaman (F5)<br>
+                3. Restart aplikasi jika perlu
+              </p>
+            </div>`;
+              } else {
+                errorMessage = 'Gagal import data: ' + (err.message || 'Unknown error');
+                errorDetails = `<div class="text-red-400">Unexpected error: ${err.message || 'Please try again'}</div>`;
+              }
+
+              showToast('error', errorMessage);
+              importResultsContent.innerHTML = errorDetails;
+              importResults.classList.remove('hidden');
+            } finally {
+              // Stop progress animation
+              clearInterval(progressInterval);
+
+              // Set progress to 100%
+              const progressBarEl = document.getElementById('import-progress-bar');
+              const progressPercentageEl = document.getElementById('import-progress-percentage');
+              const progressTextEl = document.getElementById('import-progress-text');
+
+              if (progressBarEl) progressBarEl.style.width = '100%';
+              if (progressPercentageEl) progressPercentageEl.textContent = '100%';
+              if (progressTextEl) {
+                progressTextEl.innerHTML = '<i class="ti ti-check mr-2"></i><span>Import complete</span>';
+              }
+
+              // Hide progress bar after 2 seconds
+              setTimeout(() => {
+                const progressContainer = document.getElementById('import-progress');
+                if (progressContainer) progressContainer.classList.add('hidden');
+              }, 2000);
+
+              importBtn.disabled = false;
+              importBtn.innerHTML = '<i class="ti ti-upload mr-2"></i>Import Data';
+            }
+          });
+
+      // Update System functionality (Admin only)
+      <% if (req.session.user_role === 'admin') { %>
+      const checkUpdateBtn = document.getElementById('check-update-btn');
+            const performUpdateBtn = document.getElementById('perform-update-btn');
+            const reloadPageBtn = document.getElementById('reload-page-btn');
+            const currentVersionEl = document.getElementById('current-version');
+            const latestVersionEl = document.getElementById('latest-version');
+            const updateStatusContainer = document.getElementById('update-status-container');
+            const updateAvailable = document.getElementById('update-available');
+            const updateUptodate = document.getElementById('update-uptodate');
+            const updateError = document.getElementById('update-error');
+            const updateErrorMessage = document.getElementById('update-error-message');
+            const updateProgressContainer = document.getElementById('update-progress-container');
+            const updateProgressBar = document.getElementById('update-progress-bar');
+            const updateProgressText = document.getElementById('update-progress-text');
+            const updateLog = document.getElementById('update-log');
+            const updateCompleteContainer = document.getElementById('update-complete-container');
+            const changelogContainer = document.getElementById('changelog-container');
+            const changelogContent = document.getElementById('changelog-content');
+
+            if (currentVersionEl) loadVersionInfo();
+
+            async function loadVersionInfo() {
+              try {
+                const res = await fetch('/api/system/version');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                currentVersionEl.textContent = data.success ? (data.currentVersion || '--') : '--';
+                latestVersionEl.textContent = '--';
+              } catch (err) {
+                currentVersionEl.textContent = '--';
+              }
+            }
+
+            if (checkUpdateBtn) {
+              checkUpdateBtn.addEventListener('click', async () => {
+                checkUpdateBtn.disabled = true;
+                checkUpdateBtn.innerHTML = '<i class="ti ti-loader animate-spin text-lg"></i><span>Checking...</span>';
+
+                updateStatusContainer.classList.add('hidden');
+                updateAvailable.classList.add('hidden');
+                updateUptodate.classList.add('hidden');
+                updateError.classList.add('hidden');
+                changelogContainer.classList.add('hidden');
+
+                try {
+                  const res = await fetch('/api/system/check-update', {
+                    headers: { 'X-CSRF-Token': '<%= csrfToken %>' }
+                  });
+                  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                  const data = await res.json();
+
+                  updateStatusContainer.classList.remove('hidden');
+
+                  if (data.success) {
+                    currentVersionEl.textContent = data.currentVersion || '--';
+                    latestVersionEl.textContent = data.latestVersion || '--';
+                    latestVersionEl.className = data.updateAvailable ? 'text-xl font-bold text-green-400' : 'text-xl font-bold text-green-400';
+
+                    if (data.updateAvailable) {
+                      updateAvailable.classList.remove('hidden');
+                      if (data.changelog && data.changelog.length > 0) {
+                        changelogContainer.classList.remove('hidden');
+                        changelogContent.innerHTML = data.changelog.map(c => {
+                          // Check if it's a version header
+                          if (c.startsWith('📦')) {
+                            return `<div class="text-primary font-semibold mt-2 first:mt-0">${escapeHtml(c)}</div>`;
+                          }
+                          return `<div class="text-gray-400 pl-2">${escapeHtml(c)}</div>`;
+                        }).join('');
+                      }
+                    } else {
+                      updateUptodate.classList.remove('hidden');
+                    }
+                  } else {
+                    updateError.classList.remove('hidden');
+                    updateErrorMessage.textContent = data.error || 'Unable to check';
+                  }
+                } catch (err) {
+                  updateStatusContainer.classList.remove('hidden');
+                  updateError.classList.remove('hidden');
+                  updateErrorMessage.textContent = err.message;
+                } finally {
+                  checkUpdateBtn.disabled = false;
+                  checkUpdateBtn.innerHTML = '<i class="ti ti-refresh text-lg"></i><span>Check for Updates</span>';
+                }
+              });
+            }
+
+            if (performUpdateBtn) {
+              performUpdateBtn.addEventListener('click', () => performUpdate('normal'));
+            }
+
+            // Conflict resolution buttons
+            const updateStashBtn = document.getElementById('update-stash-btn');
+            const updateForceBtn = document.getElementById('update-force-btn');
+            const updateCancelBtn = document.getElementById('update-cancel-btn');
+            const updateConflict = document.getElementById('update-conflict');
+            const conflictLog = document.getElementById('conflict-log');
+            const conflictMessage = document.getElementById('conflict-message');
+
+            if (updateStashBtn) {
+              updateStashBtn.addEventListener('click', () => {
+                if (!confirm('This will temporarily save your local changes, update, then restore them. Continue?')) return;
+                performUpdate('stash');
+              });
+            }
+
+            if (updateForceBtn) {
+              updateForceBtn.addEventListener('click', () => {
+                if (!confirm('WARNING: This will permanently delete all your local changes! Are you sure?')) return;
+                if (!confirm('This action cannot be undone. Your local modifications will be lost. Continue?')) return;
+                performUpdate('force');
+              });
+            }
+
+            if (updateCancelBtn) {
+              updateCancelBtn.addEventListener('click', () => {
+                updateConflict.classList.add('hidden');
+                updateAvailable.classList.remove('hidden');
+              });
+            }
+
+            async function performUpdate(mode = 'normal') {
+              if (mode === 'normal' && !confirm('Update now? The app will restart.')) return;
+
+              performUpdateBtn.disabled = true;
+              performUpdateBtn.innerHTML = '<i class="ti ti-loader animate-spin"></i><span>Updating...</span>';
+
+              updateStatusContainer.classList.add('hidden');
+              updateConflict.classList.add('hidden');
+              updateProgressContainer.classList.remove('hidden');
+              updateLog.innerHTML = '';
+              updateProgressBar.style.width = '10%';
+              updateProgressBar.className = 'bg-primary h-1.5 rounded-full transition-all duration-500';
+              updateProgressText.textContent = 'Starting...';
+
+              try {
+                updateProgressBar.style.width = '30%';
+                updateProgressText.textContent = mode === 'stash' ? 'Stashing changes...' : mode === 'force' ? 'Force resetting...' : 'Pulling changes...';
+
+                const res = await fetch('/api/system/perform-update', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '<%= csrfToken %>'
+                  },
+                  body: JSON.stringify({ mode })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                  updateProgressBar.style.width = '100%';
+                  updateProgressText.textContent = 'Complete!';
+                  if (data.log) updateLog.innerHTML = data.log.map(l => `<div>${escapeHtml(l)}</div>`).join('');
+
+                  setTimeout(() => {
+                    updateProgressContainer.classList.add('hidden');
+                    updateCompleteContainer.classList.remove('hidden');
+                  }, 1000);
+
+                  setTimeout(() => window.location.reload(), 6000);
+                } else if (data.hasConflict) {
+                  // Show conflict resolution UI
+                  updateProgressContainer.classList.add('hidden');
+                  updateStatusContainer.classList.remove('hidden');
+                  updateAvailable.classList.add('hidden');
+                  updateConflict.classList.remove('hidden');
+
+                  if (data.conflictMessage) {
+                    conflictMessage.textContent = data.conflictMessage;
+                  }
+                  if (data.log && data.log.length > 0) {
+                    conflictLog.innerHTML = data.log.map(l => `<div>${escapeHtml(l)}</div>`).join('');
+                    conflictLog.classList.remove('hidden');
+                  } else {
+                    conflictLog.classList.add('hidden');
+                  }
+                } else {
+                  updateProgressText.textContent = 'Failed';
+                  updateProgressBar.className = 'bg-red-500 h-1.5 rounded-full transition-all duration-500';
+                  updateProgressBar.style.width = '100%';
+                  if (data.log) updateLog.innerHTML = data.log.map(l => `<div class="text-red-400">${escapeHtml(l)}</div>`).join('');
+                  showToast('error', data.error || 'Update failed');
+                }
+              } catch (err) {
+                updateProgressText.textContent = 'Failed';
+                updateProgressBar.className = 'bg-red-500 h-1.5 rounded-full';
+                updateLog.innerHTML = `<div class="text-red-400">${escapeHtml(err.message)}</div>`;
+                showToast('error', 'Network error');
+              } finally {
+                performUpdateBtn.disabled = false;
+                performUpdateBtn.innerHTML = '<i class="ti ti-download"></i><span>Update Now</span>';
+              }
+            }
+
+            if (reloadPageBtn) {
+              reloadPageBtn.addEventListener('click', () => window.location.reload());
+            }
+
+            function escapeHtml(text) {
+              const div = document.createElement('div');
+              div.textContent = text;
+              return div.innerHTML;
+            }
+      <% } %>
+  });
+      </script>

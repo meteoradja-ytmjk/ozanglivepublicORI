@@ -1,0 +1,969 @@
+<% layout('layout') -%>
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+  <div>
+    <h2 class="text-2xl font-bold">Stream Schedule</h2>
+    <p class="text-gray-400 text-sm mt-1">View and manage your streaming schedules</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <div class="w-40">
+      <select id="schedule-filter"
+        class="bg-dark-700 border border-gray-600 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary w-full">
+        <option value="all">All Schedules</option>
+        <option value="once">Once</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Today's Schedule Section -->
+<div class="bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+  <div class="flex items-center gap-2 mb-4">
+    <i class="ti ti-calendar-event text-primary text-xl"></i>
+    <h3 class="text-lg font-semibold">Today's Schedule</h3>
+    <span class="text-xs text-gray-400">(<%= new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) %>)</span>
+  </div>
+  
+  <% if (todaySchedules && todaySchedules.length > 0) { %>
+    <div class="space-y-3">
+      <% todaySchedules.forEach(function(stream) { %>
+        <div class="flex items-center justify-between bg-dark-700 rounded-lg p-3 schedule-item" data-type="<%= stream.schedule_type %>">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-dark-600 rounded-lg flex items-center justify-center">
+              <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+            </div>
+            <div>
+              <div class="font-medium text-sm"><%= stream.title %></div>
+              <div class="text-xs text-gray-400">
+                <% if (stream.schedule_type === 'once') { %>
+                  <%= helpers.formatTime(stream.schedule_time) %>
+                <% } else { %>
+                  <%= stream.recurring_time %>
+                <% } %>
+                <span class="mx-1">•</span>
+                <span class="capitalize"><%= stream.schedule_type %></span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-1 text-xs rounded-full <%= stream.status === 'live' ? 'bg-green-500/20 text-green-400' : 'bg-primary/20 text-primary' %>">
+              <%= stream.status === 'live' ? 'LIVE' : 'Scheduled' %>
+            </span>
+            <button onclick="editStream('<%= stream.id %>')" class="p-1.5 text-gray-400 hover:text-primary transition-colors" title="Edit Stream">
+              <i class="ti ti-edit"></i>
+            </button>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  <% } else { %>
+    <div class="text-center py-6 text-gray-400">
+      <i class="ti ti-calendar-off text-3xl mb-2"></i>
+      <p>No streams scheduled for today</p>
+    </div>
+  <% } %>
+</div>
+
+<!-- All Schedules Section -->
+<div class="space-y-6">
+  <!-- Once Schedules -->
+  <% if (grouped.once && grouped.once.length > 0) { %>
+  <div class="schedule-section" data-section="once">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="ti ti-calendar text-blue-400"></i>
+      <h3 class="font-semibold">One-time Schedules</h3>
+      <span class="text-xs text-gray-400">(<%= grouped.once.length %>)</span>
+    </div>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-700">
+        <thead class="bg-dark-700">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Stream</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Platform</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Scheduled Time</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Duration</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-700">
+          <% grouped.once.forEach(function(stream) { %>
+          <tr class="hover:bg-dark-700/50 schedule-item" data-type="once">
+            <td class="px-4 py-3">
+              <div class="font-medium text-sm"><%= stream.title %></div>
+              <div class="text-xs text-gray-400"><%= stream.video_title || 'No video' %></div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-1">
+                <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+                <span class="text-sm"><%= stream.platform || 'Custom' %></span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-sm"><%= helpers.formatDateTime(stream.schedule_time) %></td>
+            <td class="px-4 py-3 text-sm text-gray-400">
+              <% if (stream.stream_duration_minutes && stream.stream_duration_minutes > 0) { %>
+                <% const hours = Math.floor(stream.stream_duration_minutes / 60); %>
+                <% const mins = stream.stream_duration_minutes % 60; %>
+                <%= hours > 0 ? hours + ' jam' : '' %><%= hours > 0 && mins > 0 ? ' ' : '' %><%= mins > 0 ? mins + ' menit' : '' %>
+              <% } else if (stream.stream_duration_hours) { %>
+                <%= stream.stream_duration_hours %> jam
+              <% } else { %>
+                --
+              <% } %>
+            </td>
+            <td class="px-4 py-3">
+              <% 
+                // Determine display status for once schedules
+                let displayStatus = stream.status;
+                let statusClass = 'bg-gray-500/20 text-gray-400';
+                let statusText = 'Offline';
+                
+                if (stream.status === 'live') {
+                  statusClass = 'bg-green-500/20 text-green-400';
+                  statusText = 'LIVE';
+                } else if (stream.status === 'scheduled') {
+                  statusClass = 'bg-primary/20 text-primary';
+                  statusText = 'Scheduled';
+                } else if (stream.status === 'offline' && stream.schedule_time) {
+                  // For offline streams with schedule_time, check if it's in the future
+                  const schedTime = new Date(stream.schedule_time);
+                  const now = new Date();
+                  if (schedTime > now) {
+                    statusClass = 'bg-primary/20 text-primary';
+                    statusText = 'Scheduled';
+                  }
+                }
+              %>
+              <span class="px-2 py-1 text-xs rounded-full <%= statusClass %>">
+                <%= statusText %>
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="toggleStream('<%= stream.id %>', '<%= stream.status %>')" class="w-8 h-8 flex items-center justify-center <%= stream.status === 'live' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30' %> rounded-lg" title="<%= stream.status === 'live' ? 'Stop' : 'Start' %>">
+                  <i class="ti <%= stream.status === 'live' ? 'ti-player-stop' : 'ti-player-play' %>"></i>
+                </button>
+                <button onclick="editStream('<%= stream.id %>')" class="w-8 h-8 flex items-center justify-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg" title="Edit Stream">
+                  <i class="ti ti-edit"></i>
+                </button>
+                <button onclick="deleteStream('<%= stream.id %>')" class="w-8 h-8 flex items-center justify-center bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg" title="Delete Stream">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-2">
+      <% grouped.once.forEach(function(stream) { %>
+      <div class="bg-gray-800 rounded-lg p-3 schedule-item" data-type="once">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+            <span class="font-medium text-sm"><%= stream.title %></span>
+          </div>
+          <% 
+            // Determine display status for once schedules (mobile)
+            let mobileStatusClass = 'bg-gray-500/20 text-gray-400';
+            let mobileStatusText = 'Offline';
+            
+            if (stream.status === 'live') {
+              mobileStatusClass = 'bg-green-500/20 text-green-400';
+              mobileStatusText = 'LIVE';
+            } else if (stream.status === 'scheduled') {
+              mobileStatusClass = 'bg-primary/20 text-primary';
+              mobileStatusText = 'Scheduled';
+            } else if (stream.status === 'offline' && stream.schedule_time) {
+              const schedTime = new Date(stream.schedule_time);
+              const now = new Date();
+              if (schedTime > now) {
+                mobileStatusClass = 'bg-primary/20 text-primary';
+                mobileStatusText = 'Scheduled';
+              }
+            }
+          %>
+          <span class="px-2 py-0.5 text-xs rounded-full <%= mobileStatusClass %>">
+            <%= mobileStatusText %>
+          </span>
+        </div>
+        <div class="text-xs text-gray-400 mb-2">
+          <span><%= helpers.formatDateTime(stream.schedule_time) %></span>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button onclick="toggleStream('<%= stream.id %>', '<%= stream.status %>')" class="px-3 py-1.5 text-xs rounded-lg <%= stream.status === 'live' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400' %>">
+            <i class="ti <%= stream.status === 'live' ? 'ti-player-stop' : 'ti-player-play' %> mr-1"></i><%= stream.status === 'live' ? 'Stop' : 'Start' %>
+          </button>
+          <button onclick="editStream('<%= stream.id %>')" class="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 text-blue-400">
+            <i class="ti ti-edit mr-1"></i>Edit
+          </button>
+          <button onclick="deleteStream('<%= stream.id %>')" class="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400">
+            <i class="ti ti-trash mr-1"></i>Delete
+          </button>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Daily Schedules -->
+  <% if (grouped.daily && grouped.daily.length > 0) { %>
+  <div class="schedule-section" data-section="daily">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="ti ti-repeat text-green-400"></i>
+      <h3 class="font-semibold">Daily Schedules</h3>
+      <span class="text-xs text-gray-400">(<%= grouped.daily.length %>)</span>
+    </div>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-700">
+        <thead class="bg-dark-700">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Stream</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Platform</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Time</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Next Run</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-700">
+          <% grouped.daily.forEach(function(stream) { %>
+          <tr class="hover:bg-dark-700/50 schedule-item" data-type="daily">
+            <td class="px-4 py-3">
+              <div class="font-medium text-sm"><%= stream.title %></div>
+              <div class="text-xs text-gray-400"><%= stream.video_title || 'No video' %></div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-1">
+                <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+                <span class="text-sm"><%= stream.platform || 'Custom' %></span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-sm"><%= stream.recurring_time || '--' %></td>
+            <td class="px-4 py-3 text-sm text-gray-400">
+              <% if (stream.nextRunTime) { %>
+                <%= helpers.formatDateTime(stream.nextRunTime) %>
+              <% } else { %>
+                --
+              <% } %>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-1 text-xs rounded-full <%= stream.status === 'live' ? 'bg-green-500/20 text-green-400' : stream.recurring_enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400' %>">
+                <%= stream.status === 'live' ? 'LIVE' : stream.recurring_enabled ? 'Active' : 'Paused' %>
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="toggleStream('<%= stream.id %>', '<%= stream.status %>')" class="w-8 h-8 flex items-center justify-center <%= stream.status === 'live' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30' %> rounded-lg" title="<%= stream.status === 'live' ? 'Stop' : 'Start' %>">
+                  <i class="ti <%= stream.status === 'live' ? 'ti-player-stop' : 'ti-player-play' %>"></i>
+                </button>
+                <button onclick="editStream('<%= stream.id %>')" class="w-8 h-8 flex items-center justify-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg" title="Edit Stream">
+                  <i class="ti ti-edit"></i>
+                </button>
+                <button onclick="deleteStream('<%= stream.id %>')" class="w-8 h-8 flex items-center justify-center bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg" title="Delete Stream">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-2">
+      <% grouped.daily.forEach(function(stream) { %>
+      <div class="bg-gray-800 rounded-lg p-3 schedule-item" data-type="daily">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+            <span class="font-medium text-sm"><%= stream.title %></span>
+          </div>
+          <span class="px-2 py-0.5 text-xs rounded-full <%= stream.status === 'live' ? 'bg-green-500/20 text-green-400' : stream.recurring_enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400' %>">
+            <%= stream.status === 'live' ? 'LIVE' : stream.recurring_enabled ? 'Active' : 'Paused' %>
+          </span>
+        </div>
+        <div class="text-xs text-gray-400 mb-2">
+          <span>Daily at <%= stream.recurring_time %></span>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button onclick="toggleStream('<%= stream.id %>', '<%= stream.status %>')" class="px-3 py-1.5 text-xs rounded-lg <%= stream.status === 'live' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400' %>">
+            <i class="ti <%= stream.status === 'live' ? 'ti-player-stop' : 'ti-player-play' %> mr-1"></i><%= stream.status === 'live' ? 'Stop' : 'Start' %>
+          </button>
+          <button onclick="editStream('<%= stream.id %>')" class="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 text-blue-400">
+            <i class="ti ti-edit mr-1"></i>Edit
+          </button>
+          <button onclick="deleteStream('<%= stream.id %>')" class="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400">
+            <i class="ti ti-trash mr-1"></i>Delete
+          </button>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+
+
+  <!-- Weekly Schedules -->
+  <% if (grouped.weekly && grouped.weekly.length > 0) { %>
+  <div class="schedule-section" data-section="weekly">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="ti ti-calendar-week text-purple-400"></i>
+      <h3 class="font-semibold">Weekly Schedules</h3>
+      <span class="text-xs text-gray-400">(<%= grouped.weekly.length %>)</span>
+    </div>
+    
+    <!-- Desktop Table -->
+    <div class="hidden md:block bg-gray-800 rounded-lg shadow-md overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-700">
+        <thead class="bg-dark-700">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Stream</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Platform</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Days</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Time</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Next Run</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-700">
+          <% grouped.weekly.forEach(function(stream) { %>
+          <tr class="hover:bg-dark-700/50 schedule-item" data-type="weekly">
+            <td class="px-4 py-3">
+              <div class="font-medium text-sm"><%= stream.title %></div>
+              <div class="text-xs text-gray-400"><%= stream.video_title || 'No video' %></div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-1">
+                <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+                <span class="text-sm"><%= stream.platform || 'Custom' %></span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-sm">
+              <% const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; %>
+              <% const days = Array.isArray(stream.schedule_days) ? stream.schedule_days : []; %>
+              <%= days.map(d => dayNames[d]).join(', ') || '--' %>
+            </td>
+            <td class="px-4 py-3 text-sm"><%= stream.recurring_time || '--' %></td>
+            <td class="px-4 py-3 text-sm text-gray-400">
+              <% if (stream.nextRunTime) { %>
+                <%= helpers.formatDateTime(stream.nextRunTime) %>
+              <% } else { %>
+                --
+              <% } %>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-1 text-xs rounded-full <%= stream.status === 'live' ? 'bg-green-500/20 text-green-400' : stream.recurring_enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400' %>">
+                <%= stream.status === 'live' ? 'LIVE' : stream.recurring_enabled ? 'Active' : 'Paused' %>
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="toggleStream('<%= stream.id %>', '<%= stream.status %>')" class="w-8 h-8 flex items-center justify-center <%= stream.status === 'live' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30' %> rounded-lg" title="<%= stream.status === 'live' ? 'Stop' : 'Start' %>">
+                  <i class="ti <%= stream.status === 'live' ? 'ti-player-stop' : 'ti-player-play' %>"></i>
+                </button>
+                <button onclick="editStream('<%= stream.id %>')" class="w-8 h-8 flex items-center justify-center bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg" title="Edit Stream">
+                  <i class="ti ti-edit"></i>
+                </button>
+                <button onclick="deleteStream('<%= stream.id %>')" class="w-8 h-8 flex items-center justify-center bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg" title="Delete Stream">
+                  <i class="ti ti-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-2">
+      <% grouped.weekly.forEach(function(stream) { %>
+      <div class="bg-gray-800 rounded-lg p-3 schedule-item" data-type="weekly">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i class="ti ti-brand-<%= helpers.getPlatformIcon(stream.platform) %> text-<%= helpers.getPlatformColor(stream.platform) %>"></i>
+            <span class="font-medium text-sm"><%= stream.title %></span>
+          </div>
+          <span class="px-2 py-0.5 text-xs rounded-full <%= stream.status === 'live' ? 'bg-green-500/20 text-green-400' : stream.recurring_enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400' %>">
+            <%= stream.status === 'live' ? 'LIVE' : stream.recurring_enabled ? 'Active' : 'Paused' %>
+          </span>
+        </div>
+        <div class="text-xs text-gray-400 mb-1">
+          <% const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; %>
+          <% const days = Array.isArray(stream.schedule_days) ? stream.schedule_days : []; %>
+          <%= days.map(d => dayNames[d]).join(', ') %> at <%= stream.recurring_time %>
+        </div>
+        <div class="text-xs text-gray-400 mb-2">
+          <span>Next: <%= stream.nextRunTime ? helpers.formatDateTime(stream.nextRunTime) : '--' %></span>
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <button onclick="toggleStream('<%= stream.id %>', '<%= stream.status %>')" class="px-3 py-1.5 text-xs rounded-lg <%= stream.status === 'live' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400' %>">
+            <i class="ti <%= stream.status === 'live' ? 'ti-player-stop' : 'ti-player-play' %> mr-1"></i><%= stream.status === 'live' ? 'Stop' : 'Start' %>
+          </button>
+          <button onclick="editStream('<%= stream.id %>')" class="px-3 py-1.5 text-xs rounded-lg bg-blue-500/20 text-blue-400">
+            <i class="ti ti-edit mr-1"></i>Edit
+          </button>
+          <button onclick="deleteStream('<%= stream.id %>')" class="px-3 py-1.5 text-xs rounded-lg bg-red-500/20 text-red-400">
+            <i class="ti ti-trash mr-1"></i>Delete
+          </button>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Empty State -->
+  <% if ((!grouped.once || grouped.once.length === 0) && (!grouped.daily || grouped.daily.length === 0) && (!grouped.weekly || grouped.weekly.length === 0)) { %>
+  <div class="bg-gray-800 rounded-lg shadow-md p-10 text-center">
+    <div class="flex flex-col items-center">
+      <div class="w-16 h-16 rounded-full bg-dark-700 flex items-center justify-center mb-4">
+        <i class="ti ti-calendar-off text-gray-500 text-2xl"></i>
+      </div>
+      <p class="text-gray-400 font-medium mb-2">No scheduled streams</p>
+      <p class="text-gray-500 text-sm max-w-sm mb-4">Create a stream with a schedule to see it here</p>
+      <a href="/dashboard" class="px-4 py-2 bg-primary hover:bg-secondary text-white rounded-lg transition-colors text-sm">
+        <i class="ti ti-plus mr-1"></i>Create Stream
+      </a>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+
+<!-- Edit Schedule Modal -->
+<div id="editScheduleModal" class="fixed inset-0 bg-black/50 z-50 hidden modal-overlay overflow-y-auto">
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div class="bg-dark-800 rounded-lg shadow-xl w-full max-w-md modal-container flex flex-col max-h-[90vh]">
+      <div class="flex-shrink-0 flex items-center justify-between p-4 border-b border-gray-700">
+        <h3 class="text-lg font-semibold">Edit Schedule</h3>
+        <button onclick="closeEditModal()" class="text-gray-400 hover:text-white">
+          <i class="ti ti-x text-xl"></i>
+        </button>
+      </div>
+      <div class="p-4 overflow-y-auto flex-grow">
+        <form id="editScheduleForm" class="space-y-4">
+          <input type="hidden" id="editStreamId" value="">
+          
+          <!-- Stream Title -->
+          <div>
+            <label class="text-sm font-medium text-white block mb-2">Stream Title</label>
+            <input type="text" id="editStreamTitle" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:outline-none" required>
+          </div>
+          
+          <!-- Schedule Type Display -->
+          <div>
+            <label class="text-sm font-medium text-white block mb-2">Schedule Type</label>
+            <div id="editScheduleTypeDisplay" class="px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-gray-400"></div>
+          </div>
+          
+          <!-- Once Schedule Settings -->
+          <div id="editOnceSettings" class="hidden space-y-4">
+            <div>
+              <label class="text-sm font-medium text-white block mb-2">Start Stream</label>
+              <input type="datetime-local" id="editScheduleTime" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:outline-none [color-scheme:dark]">
+            </div>
+            <div>
+              <label class="text-sm font-medium text-white block mb-2">End Stream</label>
+              <input type="datetime-local" id="editEndTime" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:outline-none [color-scheme:dark]">
+              <p class="text-xs text-gray-500 mt-1">Jika Durasi diisi, End Stream akan di-disable</p>
+            </div>
+          </div>
+          
+          <!-- Recurring Schedule Settings -->
+          <div id="editRecurringSettings" class="hidden space-y-4">
+            <div>
+              <label class="text-sm font-medium text-white block mb-2">Stream Time</label>
+              <input type="time" id="editRecurringTime" class="w-full px-4 py-2.5 bg-dark-700 border border-gray-600 rounded-lg focus:border-primary focus:outline-none [color-scheme:dark]">
+            </div>
+            
+            <!-- Weekly Days -->
+            <div id="editWeeklyDays" class="hidden">
+              <label class="text-sm font-medium text-white block mb-2">Days</label>
+              <div class="grid grid-cols-7 gap-1">
+                <button type="button" onclick="toggleEditDay(0)" data-day="0" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Sun</button>
+                <button type="button" onclick="toggleEditDay(1)" data-day="1" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Mon</button>
+                <button type="button" onclick="toggleEditDay(2)" data-day="2" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Tue</button>
+                <button type="button" onclick="toggleEditDay(3)" data-day="3" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Wed</button>
+                <button type="button" onclick="toggleEditDay(4)" data-day="4" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Thu</button>
+                <button type="button" onclick="toggleEditDay(5)" data-day="5" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Fri</button>
+                <button type="button" onclick="toggleEditDay(6)" data-day="6" class="edit-day-btn py-2 text-xs rounded-lg border border-gray-600 bg-dark-700 text-gray-300 hover:border-primary transition-colors text-center">Sat</button>
+              </div>
+            </div>
+            
+            <!-- Recurring Enabled -->
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-gray-300">Enable Recurring</label>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="editRecurringEnabled" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-dark-700 rounded-full peer peer-checked:bg-primary"></div>
+                <div class="absolute left-[2px] top-[2px] w-5 h-5 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Duration -->
+          <div id="editDurationSection">
+            <label class="text-sm font-medium text-white block mb-2">Durasi</label>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-400 block mb-1">Jam</label>
+                <input type="number" id="editDurationHours" min="0" max="168" class="w-full px-3 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-sm focus:border-primary focus:outline-none" placeholder="0">
+              </div>
+              <div>
+                <label class="text-xs text-gray-400 block mb-1">Menit</label>
+                <input type="number" id="editDurationMinutes" min="0" max="59" class="w-full px-3 py-2.5 bg-dark-700 border border-gray-600 rounded-lg text-sm focus:border-primary focus:outline-none" placeholder="0">
+              </div>
+            </div>
+            <p id="editDurationHint" class="text-xs text-gray-500 mt-1 hidden">Durasi akan digunakan sebagai prioritas utama</p>
+          </div>
+        </form>
+      </div>
+      <div class="flex-shrink-0 flex items-center justify-end gap-3 p-4 border-t border-gray-700">
+        <button onclick="closeEditModal()" class="px-4 py-2 text-sm text-gray-300 hover:text-white">Cancel</button>
+        <button onclick="saveScheduleEdit()" class="px-4 py-2 text-sm bg-primary hover:bg-secondary text-white rounded-lg">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="fixed bottom-4 right-4 bg-dark-800 text-white px-4 py-3 rounded-lg shadow-lg z-50 hidden transform transition-all duration-300">
+  <div class="flex items-center gap-2">
+    <i id="toast-icon" class="ti"></i>
+    <span id="toast-message"></span>
+  </div>
+</div>
+
+
+<script>
+  let currentEditStream = null;
+  let editSelectedDays = [];
+
+  /**
+   * Convert ISO UTC string to datetime-local input format (local time)
+   * This fixes the timezone issue where toISOString() returns UTC time
+   * @param {string} isoString - ISO 8601 UTC string from database
+   * @returns {string} - Format YYYY-MM-DDTHH:MM in local timezone
+   */
+  function formatDateTimeLocal(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  // Filter functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterSelect = document.getElementById('schedule-filter');
+    
+    filterSelect.addEventListener('change', function() {
+      const filterValue = this.value;
+      const sections = document.querySelectorAll('.schedule-section');
+      const items = document.querySelectorAll('.schedule-item');
+      
+      if (filterValue === 'all') {
+        sections.forEach(s => s.style.display = '');
+        items.forEach(i => i.style.display = '');
+      } else {
+        sections.forEach(section => {
+          const sectionType = section.getAttribute('data-section');
+          section.style.display = sectionType === filterValue ? '' : 'none';
+        });
+        items.forEach(item => {
+          const itemType = item.getAttribute('data-type');
+          if (!item.closest('.schedule-section')) {
+            item.style.display = itemType === filterValue ? '' : 'none';
+          }
+        });
+      }
+    });
+    
+  });
+
+  // Edit Stream Function
+  async function editStream(id) {
+    try {
+      const response = await fetch(`/api/streams/${id}`);
+      const result = await response.json();
+      
+      if (result.success && result.stream) {
+        currentEditStream = result.stream;
+        const stream = result.stream;
+        
+        // Fill form
+        document.getElementById('editStreamId').value = id;
+        document.getElementById('editStreamTitle').value = stream.title || '';
+        
+        // Schedule type display
+        const typeDisplay = document.getElementById('editScheduleTypeDisplay');
+        typeDisplay.textContent = stream.schedule_type ? stream.schedule_type.charAt(0).toUpperCase() + stream.schedule_type.slice(1) : 'Once';
+        
+        // Hide all settings first
+        document.getElementById('editOnceSettings').classList.add('hidden');
+        document.getElementById('editRecurringSettings').classList.add('hidden');
+        document.getElementById('editWeeklyDays').classList.add('hidden');
+        
+        // Reset disabled states
+        resetEditFieldStates();
+        
+        // Duration - parse from stream_duration_minutes
+        const totalMinutes = stream.stream_duration_minutes || 0;
+        const durationHours = Math.floor(totalMinutes / 60);
+        const durationMinutes = totalMinutes % 60;
+        document.getElementById('editDurationHours').value = durationHours || '';
+        document.getElementById('editDurationMinutes').value = durationMinutes || '';
+        
+        const hasDuration = totalMinutes > 0;
+        
+        // Show relevant settings based on schedule type
+        if (stream.schedule_type === 'once') {
+          document.getElementById('editOnceSettings').classList.remove('hidden');
+          
+          // Set schedule time (start time) - preserve original value
+          if (stream.schedule_time) {
+            document.getElementById('editScheduleTime').value = formatDateTimeLocal(stream.schedule_time);
+          } else {
+            document.getElementById('editScheduleTime').value = '';
+          }
+          
+          // Set end time only if duration is NOT set (mutual exclusion)
+          if (stream.end_time && !hasDuration) {
+            document.getElementById('editEndTime').value = formatDateTimeLocal(stream.end_time);
+          } else {
+            document.getElementById('editEndTime').value = '';
+          }
+          
+          // Initialize mutual exclusion for once schedule
+          initEditDurationEndTimeMutualExclusion();
+          updateEditDurationEndTimeState();
+        } else if (stream.schedule_type === 'daily' || stream.schedule_type === 'weekly') {
+          document.getElementById('editRecurringSettings').classList.remove('hidden');
+          document.getElementById('editRecurringTime').value = stream.recurring_time || '';
+          document.getElementById('editRecurringEnabled').checked = stream.recurring_enabled !== false;
+          
+          if (stream.schedule_type === 'weekly') {
+            document.getElementById('editWeeklyDays').classList.remove('hidden');
+            editSelectedDays = Array.isArray(stream.schedule_days) ? [...stream.schedule_days] : [];
+            updateEditDayButtons();
+          }
+        }
+        
+        // Show modal
+        document.getElementById('editScheduleModal').classList.remove('hidden');
+      } else {
+        showToast('error', 'Failed to load stream data');
+      }
+    } catch (error) {
+      console.error('Error loading stream:', error);
+      showToast('error', 'Failed to load stream');
+    }
+  }
+  
+  // Reset all edit field states
+  function resetEditFieldStates() {
+    const durationHours = document.getElementById('editDurationHours');
+    const durationMinutes = document.getElementById('editDurationMinutes');
+    const endTime = document.getElementById('editEndTime');
+    
+    if (durationHours) {
+      durationHours.disabled = false;
+      durationHours.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    if (durationMinutes) {
+      durationMinutes.disabled = false;
+      durationMinutes.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    if (endTime) {
+      endTime.disabled = false;
+      endTime.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+  }
+  
+  // Initialize mutual exclusion between Duration and End Time in edit modal
+  function initEditDurationEndTimeMutualExclusion() {
+    const durationHours = document.getElementById('editDurationHours');
+    const durationMinutes = document.getElementById('editDurationMinutes');
+    const endTime = document.getElementById('editEndTime');
+    
+    if (!durationHours || !durationMinutes || !endTime) return;
+    
+    // Remove existing listeners
+    durationHours.removeEventListener('input', handleEditDurationChange);
+    durationMinutes.removeEventListener('input', handleEditDurationChange);
+    endTime.removeEventListener('input', handleEditEndTimeChange);
+    
+    // Add new listeners
+    durationHours.addEventListener('input', handleEditDurationChange);
+    durationMinutes.addEventListener('input', handleEditDurationChange);
+    endTime.addEventListener('input', handleEditEndTimeChange);
+  }
+  
+  function handleEditDurationChange() {
+    updateEditDurationEndTimeState();
+  }
+  
+  function handleEditEndTimeChange() {
+    updateEditDurationEndTimeState();
+  }
+  
+  function updateEditDurationEndTimeState() {
+    const durationHours = document.getElementById('editDurationHours');
+    const durationMinutes = document.getElementById('editDurationMinutes');
+    const endTime = document.getElementById('editEndTime');
+    const durationHint = document.getElementById('editDurationHint');
+    
+    if (!durationHours || !durationMinutes || !endTime) return;
+    
+    const hours = parseInt(durationHours.value) || 0;
+    const minutes = parseInt(durationMinutes.value) || 0;
+    const hasDuration = hours > 0 || minutes > 0;
+    const hasEndTime = endTime.value && endTime.value.trim() !== '';
+    
+    // If duration is filled, disable end time
+    if (hasDuration) {
+      endTime.disabled = true;
+      endTime.classList.add('opacity-50', 'cursor-not-allowed');
+      endTime.value = ''; // Clear end time when duration is set
+      durationHours.disabled = false;
+      durationMinutes.disabled = false;
+      durationHours.classList.remove('opacity-50', 'cursor-not-allowed');
+      durationMinutes.classList.remove('opacity-50', 'cursor-not-allowed');
+      if (durationHint) durationHint.classList.remove('hidden');
+    } 
+    // If end time is filled, disable duration
+    else if (hasEndTime) {
+      durationHours.disabled = true;
+      durationMinutes.disabled = true;
+      durationHours.classList.add('opacity-50', 'cursor-not-allowed');
+      durationMinutes.classList.add('opacity-50', 'cursor-not-allowed');
+      endTime.disabled = false;
+      endTime.classList.remove('opacity-50', 'cursor-not-allowed');
+      if (durationHint) durationHint.classList.add('hidden');
+    } 
+    // Neither is filled, enable both
+    else {
+      endTime.disabled = false;
+      endTime.classList.remove('opacity-50', 'cursor-not-allowed');
+      durationHours.disabled = false;
+      durationMinutes.disabled = false;
+      durationHours.classList.remove('opacity-50', 'cursor-not-allowed');
+      durationMinutes.classList.remove('opacity-50', 'cursor-not-allowed');
+      if (durationHint) durationHint.classList.add('hidden');
+    }
+  }
+
+  function closeEditModal() {
+    document.getElementById('editScheduleModal').classList.add('hidden');
+    currentEditStream = null;
+    editSelectedDays = [];
+    
+    // Reset field states
+    resetEditFieldStates();
+    
+    // Clear form values
+    document.getElementById('editStreamId').value = '';
+    document.getElementById('editStreamTitle').value = '';
+    document.getElementById('editScheduleTime').value = '';
+    document.getElementById('editEndTime').value = '';
+    document.getElementById('editDurationHours').value = '';
+    document.getElementById('editDurationMinutes').value = '';
+    document.getElementById('editRecurringTime').value = '';
+  }
+
+  function toggleEditDay(day) {
+    const index = editSelectedDays.indexOf(day);
+    if (index > -1) {
+      editSelectedDays.splice(index, 1);
+    } else {
+      editSelectedDays.push(day);
+    }
+    updateEditDayButtons();
+  }
+
+  function updateEditDayButtons() {
+    document.querySelectorAll('.edit-day-btn').forEach(btn => {
+      const day = parseInt(btn.getAttribute('data-day'));
+      if (editSelectedDays.includes(day)) {
+        btn.classList.add('border-primary', 'bg-primary', 'text-white');
+        btn.classList.remove('border-gray-600', 'bg-dark-700', 'text-gray-300');
+      } else {
+        btn.classList.remove('border-primary', 'bg-primary', 'text-white');
+        btn.classList.add('border-gray-600', 'bg-dark-700', 'text-gray-300');
+      }
+    });
+  }
+
+  async function saveScheduleEdit() {
+    const streamId = document.getElementById('editStreamId').value;
+    if (!streamId || !currentEditStream) return;
+    
+    const updateData = {
+      streamTitle: document.getElementById('editStreamTitle').value
+    };
+    
+    // Get duration - send as separate hours and minutes for API
+    const hours = parseInt(document.getElementById('editDurationHours').value) || 0;
+    const minutes = parseInt(document.getElementById('editDurationMinutes').value) || 0;
+    updateData.streamDurationHours = hours;
+    updateData.streamDurationMinutes = minutes;
+    
+    const hasDuration = hours > 0 || minutes > 0;
+    
+    // Schedule type specific data
+    if (currentEditStream.schedule_type === 'once') {
+      const scheduleTime = document.getElementById('editScheduleTime').value;
+      const endTime = document.getElementById('editEndTime').value;
+      
+      // Always send start time
+      if (scheduleTime) updateData.scheduleStartTime = scheduleTime;
+      
+      // Only send end time if duration is NOT set (mutual exclusion)
+      // If duration is set, clear end time
+      if (hasDuration) {
+        updateData.scheduleEndTime = null; // Clear end time when duration is set
+      } else if (endTime) {
+        updateData.scheduleEndTime = endTime;
+      }
+    } else if (currentEditStream.schedule_type === 'daily' || currentEditStream.schedule_type === 'weekly') {
+      updateData.recurringTime = document.getElementById('editRecurringTime').value;
+      updateData.recurringEnabled = document.getElementById('editRecurringEnabled').checked;
+      
+      if (currentEditStream.schedule_type === 'weekly') {
+        updateData.scheduleDays = JSON.stringify(editSelectedDays);
+      }
+    }
+    
+    try {
+      const response = await fetch(`/api/streams/${streamId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast('success', 'Schedule updated successfully');
+        closeEditModal();
+        // Reload page to show updated data
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showToast('error', result.error || 'Failed to update schedule');
+      }
+    } catch (error) {
+      console.error('Error updating schedule:', error);
+      showToast('error', 'Failed to update schedule');
+    }
+  }
+
+  function showToast(type, message) {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toast-icon');
+    const msg = document.getElementById('toast-message');
+    
+    // Handle different toast types
+    let iconClass = 'ti-check text-green-400';
+    if (type === 'error') {
+      iconClass = 'ti-x text-red-400';
+    } else if (type === 'info') {
+      iconClass = 'ti-info-circle text-blue-400';
+    }
+    
+    icon.className = 'ti ' + iconClass;
+    msg.textContent = message;
+    
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 3000);
+  }
+
+  // Toggle stream (Start/Stop)
+  async function toggleStream(streamId, currentStatus) {
+    const action = currentStatus === 'live' ? 'stop' : 'start';
+    const actionText = action === 'start' ? 'Starting' : 'Stopping';
+    
+    showToast('info', `${actionText} stream...`);
+    
+    try {
+      const response = await fetch(`/api/streams/${streamId}/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast('success', `Stream ${action === 'start' ? 'started' : 'stopped'} successfully`);
+        // Reload page to show updated status
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('error', result.error || `Failed to ${action} stream`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing stream:`, error);
+      showToast('error', `Failed to ${action} stream`);
+    }
+  }
+
+  // Delete stream
+  async function deleteStream(streamId) {
+    if (!confirm('Are you sure you want to delete this stream? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/streams/${streamId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        showToast('success', 'Stream deleted successfully');
+        // Reload page to show updated list
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showToast('error', result.error || 'Failed to delete stream');
+      }
+    } catch (error) {
+      console.error('Error deleting stream:', error);
+      showToast('error', 'Failed to delete stream');
+    }
+  }
+
+  // Close modal on outside click
+  document.getElementById('editScheduleModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  // Auto-apply filter from URL query parameter
+  (function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterParam = urlParams.get('filter');
+    if (filterParam && ['once', 'daily', 'weekly'].includes(filterParam)) {
+      const filterSelect = document.getElementById('schedule-filter');
+      if (filterSelect) {
+        filterSelect.value = filterParam;
+        filterSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  })();
+</script>
