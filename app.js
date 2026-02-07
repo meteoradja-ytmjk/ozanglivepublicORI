@@ -35,6 +35,7 @@ const TitleFolder = require('./models/TitleFolder');
 const SystemSettings = require('./models/SystemSettings');
 const YouTubeBroadcastSettings = require('./models/YouTubeBroadcastSettings');
 const scheduleService = require('./services/scheduleService');
+const backupService = require('./services/backupService');
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 // Track if we're shutting down to prevent multiple shutdown attempts
 let isShuttingDown = false;
@@ -3080,32 +3081,32 @@ app.post('/api/backup/import-all', isAuthenticated, uploadBackup.single('backupF
       try {
         backupData = JSON.parse(fileContent);
         console.log('[Import] JSON parsed successfully');
-        
+
         // Log backup data structure for debugging
         console.log('[Import] Backup data structure:');
         console.log('[Import]   - Type:', typeof backupData);
         console.log('[Import]   - Is Array:', Array.isArray(backupData));
         console.log('[Import]   - Top-level keys:', Object.keys(backupData || {}).join(', '));
-        
+
         // Detect format type
         const hasMetadata = backupData && backupData.metadata;
         const hasStreamsArray = backupData && Array.isArray(backupData.streams);
         const isOldFormat = !hasMetadata && hasStreamsArray;
-        
+
         console.log('[Import] Format detection:');
         console.log('[Import]   - Has metadata:', hasMetadata);
         console.log('[Import]   - Has streams array:', hasStreamsArray);
         console.log('[Import]   - Detected as old format:', isOldFormat);
-        
+
         if (hasMetadata) {
           console.log('[Import] Metadata:', JSON.stringify(backupData.metadata, null, 2));
         }
-        
+
         // Log data counts for each category
-        const categories = ['streams', 'youtube_credentials', 'broadcast_templates', 
-                           'recurring_schedules', 'stream_templates', 'playlists',
-                           'title_folders', 'title_suggestions', 'thumbnail_files'];
-        
+        const categories = ['streams', 'youtube_credentials', 'broadcast_templates',
+          'recurring_schedules', 'stream_templates', 'playlists',
+          'title_folders', 'title_suggestions', 'thumbnail_files'];
+
         console.log('[Import] Data counts by category:');
         categories.forEach(cat => {
           if (backupData[cat]) {
@@ -3116,7 +3117,7 @@ app.post('/api/backup/import-all', isAuthenticated, uploadBackup.single('backupF
             }
           }
         });
-        
+
       } catch (parseError) {
         console.error('[Import] JSON parse error:', parseError.message);
         console.error('[Import] File content preview (first 500 chars):', fileContent.substring(0, 500));
