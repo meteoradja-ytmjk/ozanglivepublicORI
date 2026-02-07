@@ -2063,6 +2063,12 @@ module.exports = {
   exportRecurringSchedules,
   exportStreamTemplates,
   exportPlaylists,
+  // Import data functions (used by comprehensiveImport)
+  importYouTubeCredentialsData,
+  importBroadcastTemplatesData,
+  importRecurringSchedulesData,
+  importStreamTemplatesData,
+  importPlaylistsData,
   // Title Manager functions
   exportTitleFolders,
   exportTitleSuggestions,

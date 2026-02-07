@@ -2993,7 +2993,6 @@ app.post('/api/streams', isAuthenticated, [
 });
 
 // Stream Settings Backup - Export endpoint (MUST be before :id routes)
-const backupService = require('./services/backupService');
 
 app.get('/api/streams/export', isAuthenticated, async (req, res) => {
   try {
