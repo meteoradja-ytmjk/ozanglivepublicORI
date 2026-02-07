@@ -114,12 +114,12 @@
 ### Quick Install (VPS Ubuntu/Debian)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/meteoradja-ytmjk/ozanglivepublic/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meteoradja-ytmjk/ozanglivepublicORI/main/install.sh | bash
 ```
 ### Untuk reset VPS jika Sebelumnya sudah ada / Terinstal 
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/meteoradja-ytmjk/ozanglivepublic/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meteoradja-ytmjk/ozanglivepublicORI/main/uninstall.sh | bash
 ```
 
 > 💡 **Installer otomatis mendeteksi** jika sudah ada instalasi sebelumnya dan memberikan pilihan:
@@ -137,8 +137,8 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs ffmpeg git
 
 # Clone & setup
-git clone https://github.com/meteoradja-ytmjk/ozanglivepublic
-cd ozanglivepublic
+git clone https://github.com/meteoradja-ytmjk/ozanglivepublicORI
+cd ozanglivepublicORI
 npm install
 npm run generate-secret
 
@@ -154,8 +154,8 @@ pm2 save && pm2 startup
 ### Docker Installation
 
 ```bash
-git clone https://github.com/meteoradja-ytmjk/ozanglivepublic
-cd ozanglivepublic
+git clone https://github.com/meteoradja-ytmjk/ozanglivepublicORI
+cd ozanglivepublicORI
 cp .env.example .env
 node generate-secret.js
 docker-compose up -d
@@ -168,11 +168,11 @@ docker-compose up -d
 ### Quick Update
 
 ```bash
-cd ~/ozanglivepublic && git pull && npm install && pm2 restart ozanglive
+cd ~/ozanglivepublicORI && git pull && npm install && pm2 restart ozanglive
 ```
 ### Jika adamasalah di Quick Update
 ```bash
-cd ~/ozanglivepublic
+cd ~/ozanglivepublicORI
 git reset --hard HEAD
 git pull
 npm install
@@ -181,7 +181,7 @@ pm2 restart ozanglive
 
 ### Fresh Install (Replace Total)
 ```bash
-cd ~/ozanglivepublic && git fetch origin && git reset --hard origin/main && npm install && pm2 restart ozanglive
+cd ~/ozanglivepublicORI && git fetch origin && git reset --hard origin/main && npm install && pm2 restart ozanglive
 ```
 
 > ⚠️ Backup database sebelum menjalankan: `cp db/streamflow.db db/streamflow.db.backup`
@@ -396,7 +396,7 @@ sudo apt install sqlite3 -y
 
 ```bash
 # Masuk ke folder aplikasi
-cd /home/Ozang88/ozanglivepublic
+cd /home/Ozang88/ozanglivepublicORI
 
 # Hapus user
 sqlite3 db/streamflow.db "DELETE FROM users WHERE id = 'f53ed9e0-ba33-4fd1-8626-b4b51a4bc8da';"
@@ -406,7 +406,7 @@ sqlite3 db/streamflow.db "SELECT id, username FROM users;"
 ```
 lalu
 ```bash
-cd /home/Ozang88/ozanglivepublic
+cd /home/Ozang88/ozanglivepublicORI
 
 sqlite3 db/streamflow.db "DELETE FROM users WHERE id = 'f53ed9e0-ba33-4fd1-8626-b4b51a4bc8da';"
 
@@ -414,7 +414,7 @@ sqlite3 db/streamflow.db "DELETE FROM users WHERE id = 'f53ed9e0-ba33-4fd1-8626-
 sqlite3 db/streamflow.db "SELECT id, username FROM users;"
 ```
 ```bash
-cd ~/ozanglivepublic
+cd ~/ozanglivepublicORI
 npm start
 ```
 ------------  PM2 JIKA EROR -------------- 
@@ -439,7 +439,7 @@ sudo ./scripts/cleanup-vps.sh
 ## 📁 Struktur Project
 
 ```
-ozanglivepublic/
+ozanglivepublicORI/
 ├── app.js                 # Main application
 ├── db/streamflow.db       # SQLite database
 ├── logs/                  # Application logs
@@ -480,6 +480,6 @@ MIT License - Lihat [LICENSE.md](LICENSE.md)
 <p align="center">
   <sub>Built with ❤️ by OzangLive Team</sub>
 </p>
-"# ozanglivepublic" 
-"# ozanglivepublic" 
 "# ozanglivepublicORI" 
+"# ozanglivepublicORI" 
+"# ozanglivepublicORIORI" 
